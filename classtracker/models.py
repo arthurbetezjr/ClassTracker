@@ -1,6 +1,7 @@
 import datetime as dt
 from typing import Optional
 
+from flask import current_app
 from flask_login import UserMixin
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -11,9 +12,15 @@ from .extensions import db
 ROLE_ADMIN = "admin"
 ROLE_USER = "user"
 
-ENTRY_TYPES = {"meeting": "Cycle Meeting", "task": "Task", "exam": "Exam"}
-# Dark enough for white text to stay readable (WCAG AA).
-ENTRY_COLORS = {"meeting": "#0d6efd", "task": "#c2410c", "exam": "#dc3545"}
+ENTRY_TYPES = {"meeting": "Cycle Meeting", "task": "Task", "exam": "Exam", "happened": "What Happened"}
+# Each type is drawn as a gradient between two colors, both dark enough for white text (WCAG AA).
+ENTRY_GRADIENTS = {
+    "meeting": ("#2563eb", "#0e7490"),
+    "task": ("#b45309", "#c2410c"),
+    "exam": ("#e11d48", "#b91c1c"),
+    "happened": ("#047857", "#0f766e"),
+}
+ENTRY_COLORS = {key: colors[0] for key, colors in ENTRY_GRADIENTS.items()}
 
 
 def utcnow():
@@ -36,6 +43,9 @@ class User(UserMixin, db.Model):
     role: Mapped[str] = mapped_column(String(10), default=ROLE_USER)
     must_change_password: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # Login throttling: too many wrong passwords in a row locks the account briefly.
+    failed_logins: Mapped[int] = mapped_column(default=0, server_default="0")
+    locked_until: Mapped[Optional[dt.datetime]] = mapped_column(DateTime(timezone=True))
 
     subjects: Mapped[list["Subject"]] = relationship(secondary=enrollments, back_populates="students")
 
@@ -44,7 +54,8 @@ class User(UserMixin, db.Model):
         return self.role == ROLE_ADMIN
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        method = current_app.config.get("PASSWORD_HASH_METHOD", "scrypt")
+        self.password_hash = generate_password_hash(password, method=method)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -72,6 +83,7 @@ class Entry(db.Model):
     subject_code: Mapped[str] = mapped_column(ForeignKey("subjects.code", ondelete="CASCADE"))
     date: Mapped[dt.date]
     time: Mapped[Optional[dt.time]]
+    end_time: Mapped[Optional[dt.time]]  # Cycle Meetings only
     meeting_link: Mapped[str] = mapped_column(String(500), default="")
     instructions: Mapped[str] = mapped_column(Text, default="")
     # Entries outlive the account that created them, so these become NULL on user delete.

@@ -22,7 +22,7 @@ def test_feed_returns_events_in_range(setup):
     meeting, exam = events
     assert meeting["start"] == "2026-10-05T14:30" and meeting["allDay"] is False
     assert meeting["title"] == "CS101 · Cycle Meeting" and meeting["url"] == "/entries/1"
-    assert meeting["color"] == "#0d6efd"
+    assert meeting["color"] == "#2563eb" and meeting["classNames"] == ["ct-type-meeting"]
     assert exam["start"] == "2026-10-20" and exam["allDay"] is True
 
 
@@ -45,7 +45,7 @@ def test_feed_filters(setup):
     assert ids(setup.get(OCTOBER + "&deleted=0")) == ["E-00001", "E-00002"]
 
     deleted = setup.get(OCTOBER).get_json()[2]
-    assert deleted["classNames"] == ["entry-deleted"] and deleted["extendedProps"]["deleted"] is True
+    assert deleted["classNames"] == ["ct-type-exam", "entry-deleted"] and deleted["extendedProps"]["deleted"] is True
 
 
 def test_feed_rejects_bad_dates(setup):
@@ -59,3 +59,9 @@ def test_feed_requires_login(client):
 
 def test_add_entry_prefills_clicked_date(setup):
     assert b'value="2026-10-15"' in setup.get("/entries/new?date=2026-10-15").data
+
+
+def test_meeting_end_time_becomes_event_end(setup):
+    add_entry(setup, date="2026-10-05", time="14:00", end_time="15:30")
+    event = setup.get(OCTOBER).get_json()[0]
+    assert event["start"] == "2026-10-05T14:00" and event["end"] == "2026-10-05T15:30"

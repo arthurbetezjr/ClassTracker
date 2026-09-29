@@ -12,7 +12,7 @@
       <div class="card-body d-flex flex-column">
         <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
           <span class="badge text-bg-secondary">{{ subject.code }}</span>
-          {% if is_enrolled %}<span class="badge text-bg-primary"><i class="bi bi-check-lg"></i> Enrolled</span>{% endif %}
+          {% if is_enrolled %}<span class="badge ct-badge-grad"><i class="bi bi-check-lg"></i> Enrolled</span>{% endif %}
         </div>
         <h2 class="h6 mt-2">{{ subject.name }}</h2>
         {% if subject.description %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "entries/_macros.html" import type_badge, author with context %}
+{% from "entries/_macros.html" import type_badge, author, time_range with context %}
 {% block title %}{{ entry.public_id }} · ClassTracker{% endblock %}
 {% block content %}
 <a class="d-inline-block mb-3" href="{{ url_for('entries.index') }}">&larr; Back to entries</a>
@@ -32,7 +32,7 @@
           <dt class="col-sm-4">Date</dt>
           <dd class="col-sm-8">{{ entry.date|nice_date }}</dd>
           <dt class="col-sm-4">Time</dt>
-          <dd class="col-sm-8">{{ entry.time|nice_time if entry.time else "—" }}</dd>
+          <dd class="col-sm-8">{{ time_range(entry) }}</dd>
           {% if entry.type == "meeting" %}
           <dt class="col-sm-4">Meeting link</dt>
           <dd class="col-sm-8 text-break">
@@ -41,7 +41,7 @@
             {% else %}—{% endif %}
           </dd>
           {% endif %}
-          <dt class="col-sm-4">Instructions</dt>
+          <dt class="col-sm-4">{{ "Details" if entry.type == "happened" else "Instructions" }}</dt>
           <dd class="col-sm-8" style="white-space: pre-wrap;">{{ entry.instructions or "—" }}</dd>
           <dt class="col-sm-4">Added by</dt>
           <dd class="col-sm-8">{{ author(entry.created_by) }} · {{ entry.created_at|local_timestamp }}</dd>

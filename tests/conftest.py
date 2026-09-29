@@ -21,6 +21,8 @@ def app():
         "SECRET_KEY": "test",
         "WTF_CSRF_ENABLED": False,
         "TESTING": True,
+        # The real hashing is deliberately slow; a cheap one keeps the test suite fast.
+        "PASSWORD_HASH_METHOD": "pbkdf2:sha256:1000",
     })
 
 

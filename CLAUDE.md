@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 accounts, 4 subjects/enrollment, 5 entries, 6 calendar, 7 polish. Steps 1-6 are done.
+ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 accounts, 4 subjects/enrollment, 5 entries, 6 calendar, 7 polish. All 7 steps are done; further work is feature requests from the owner.
 
 ## Commands (PowerShell, from the repo root)
 
@@ -26,8 +26,11 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - `entries.py` owns the permission rules: `visible_entries()` (the base query for anything that lists entries, including the future calendar), `allowed_subjects()`, `can_change()`, `edit_needs_reason()`. Reuse them rather than re-deriving access rules.
 - The home page `/` is the calendar (`templates/calendar.html`, FullCalendar 6 from jsDelivr). It loads events as JSON from `entries.calendar_feed` (`/entries/calendar-feed?start&end[&subject][&types][&deleted=0]`), which is built on `visible_entries()`. Clicking an empty day opens `/entries/new?date=...`.
 - `timeutil.py`: "today" and timestamp display use `APP_TIMEZONE`; Jinja filters `nice_date`, `nice_time`, `local_timestamp`. `ENTRY_TYPES` / `ENTRY_COLORS` are available in every template. Templates importing `entries/_macros.html` must use `with context`.
+- Design: `base.html` holds the whole theme as inline CSS (Bootstrap 5.3 CSS variables, dark by default via `data-bs-theme`, light/dark toggle saved in `localStorage` as `ct-theme`) plus the brand gradient `--ct-grad` (violet → pink → orange). Entry types are drawn with `ENTRY_GRADIENTS` (models.py) through `.ct-type.ct-type-<key>` badges and `.fc-daygrid-event.ct-type-<key>` calendar events. The logo is an inline SVG macro in `templates/_logo.html` (also used as the favicon data URI). The footer credits the developer (Arthur Betez Jr.) and must stay.
+- Keep the UI minimalist; the owner asked for that explicitly.
 - Meeting links are forced to http(s) in `entries.clean()` because they're rendered as `href`s.
 - Usernames are stored lowercase (`auth.normalize_username`) and login ignores case. The admin account can't be deleted or reset from the Accounts page.
+- Tests set `PASSWORD_HASH_METHOD` to a cheap pbkdf2 so the suite runs in seconds; production uses scrypt.
 - Tests: `admin_client` fixture in `tests/conftest.py` is logged in as admin with the first-login password change done; `switch_to_new_user` / `switch_to_admin` swap the logged-in account.
 - Every POST form must include `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` (Flask-WTF CSRFProtect).
 - Tests use in-memory SQLite with CSRF disabled (`tests/conftest.py`); keep models portable between SQLite and Postgres.
@@ -52,11 +55,12 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - Only the admin creates, edits, and deletes accounts.
 - Subjects: `code` is the unique ID and can't be changed after creation. Deleting a subject deletes its entries and enrollments, after a warning.
 - Users enroll in subjects. They see calendar entries only for the subjects they're enrolled in; the admin sees all entries.
-- Entries: type is Cycle Meeting, Task, or Exam, each shown in its own color. Each entry has a unique readable ID (for example `E-00042`). Subject code and date are required. Time, meeting link (Meetings only), and instructions are optional.
+- Entries: type is Cycle Meeting, Task, Exam, or What Happened (an update with no deadline; its details text is required), each with its own gradient. Only Cycle Meetings have a meeting link and an optional end time (after the start time). Each entry has a unique readable ID (for example `E-00042`). Subject code and date are required. Time, meeting link (Meetings only), and instructions are optional.
 - Users can add entries only in subjects they're enrolled in, and can edit or delete only their own entries. The admin can edit or delete any entry.
 - Every delete needs a reason. Edits need a reason only when the editor didn't create the entry (i.e. the admin editing someone else's).
 - Deleted entries are soft-deleted: they stay visible to everyone in the subject, marked deleted, with the reason, and can no longer be edited. Every edit and delete (by anyone) is recorded in `entry_changes` with what changed; only the admin sees this change log.
 - Deleting a user keeps the entries they created.
+- Login: 5 wrong passwords in a row lock that account for 5 minutes (`users.failed_logins`, `users.locked_until`); an admin password reset lifts the lock.
 
 ## Repository
 

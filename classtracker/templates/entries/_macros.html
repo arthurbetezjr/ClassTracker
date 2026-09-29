@@ -1,7 +1,11 @@
 {% macro type_badge(entry_type) -%}
-<span class="badge" style="background-color: {{ ENTRY_COLORS[entry_type] }};">{{ ENTRY_TYPES[entry_type] }}</span>
+<span class="badge ct-type ct-type-{{ entry_type }}">{{ ENTRY_TYPES[entry_type] }}</span>
 {%- endmacro %}
 
 {% macro author(user) -%}
 {% if user %}{{ user.username }}{% else %}<span class="fst-italic">deleted account</span>{% endif %}
+{%- endmacro %}
+
+{% macro time_range(entry) -%}
+{% if entry.time %}{{ entry.time|nice_time }}{% if entry.end_time %} – {{ entry.end_time|nice_time }}{% endif %}{% else %}—{% endif %}
 {%- endmacro %}

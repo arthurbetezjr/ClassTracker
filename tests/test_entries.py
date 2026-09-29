@@ -6,7 +6,7 @@ from classtracker.models import Entry, EntryChange, User
 
 
 def add_entry(client, **overrides):
-    data = {"type": "meeting", "subject_code": "CS101", "date": "2026-10-05", "time": "14:30",
+    data = {"type": "meeting", "subject_code": "CS101", "date": "2026-10-05", "time": "14:30", "end_time": "",
             "meeting_link": "https://zoom.us/j/1", "instructions": "Bring notes"}
     data.update(overrides)
     return client.post("/entries/new", data=data, follow_redirects=True)

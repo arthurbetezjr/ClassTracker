@@ -13,7 +13,7 @@
 
           <div class="mb-3">
             <span class="form-label d-block">Type</span>
-            <div class="btn-group flex-wrap" role="group" aria-label="Entry type">
+            <div class="d-flex flex-wrap gap-2" role="group" aria-label="Entry type">
               {% for key, label in ENTRY_TYPES.items() %}
               <input type="radio" class="btn-check" name="type" id="type-{{ key }}" value="{{ key }}"
                      {% if values.type == key %}checked{% endif %} required>
@@ -35,25 +35,33 @@
           </div>
 
           <div class="row g-3 mb-3">
-            <div class="col-sm-6">
+            <div class="col-sm">
               <label class="form-label" for="date">Date</label>
               <input class="form-control" id="date" name="date" type="date" value="{{ values.date }}" required>
             </div>
-            <div class="col-sm-6">
-              <label class="form-label" for="time">Time <span class="text-secondary">(optional)</span></label>
+            <div class="col-sm">
+              <label class="form-label" for="time"><span data-meeting-label>Start time</span><span data-other-label>Time</span> <span class="text-secondary">(optional)</span></label>
               <input class="form-control" id="time" name="time" type="time" value="{{ values.time }}">
+            </div>
+            <div class="col-sm" data-meeting-only>
+              <label class="form-label" for="end_time">End time <span class="text-secondary">(optional)</span></label>
+              <input class="form-control" id="end_time" name="end_time" type="time" value="{{ values.end_time }}">
             </div>
           </div>
 
-          <div class="mb-3" id="meeting-link-group">
+          <div class="mb-3" data-meeting-only>
             <label class="form-label" for="meeting_link">Meeting link <span class="text-secondary">(optional)</span></label>
             <input class="form-control" id="meeting_link" name="meeting_link" type="text" inputmode="url"
                    maxlength="500" placeholder="https://..." value="{{ values.meeting_link }}">
           </div>
 
           <div class="mb-3">
-            <label class="form-label" for="instructions">Additional instructions <span class="text-secondary">(optional)</span></label>
+            <label class="form-label" for="instructions">
+              <span data-happened-label>What happened?</span>
+              <span data-other-instructions-label>Additional instructions <span class="text-secondary">(optional)</span></span>
+            </label>
             <textarea class="form-control" id="instructions" name="instructions" rows="4">{{ values.instructions }}</textarea>
+            <div class="form-text" data-happened-label>An update anyone in the subject should know about, like an announcement or a change of plans.</div>
           </div>
 
           {% if needs_reason %}
@@ -71,12 +79,19 @@
   </div>
 </div>
 <script>
-  // Only Cycle Meetings have a meeting link.
+  // Show only the fields that apply to the chosen type.
   (function () {
-    var group = document.getElementById("meeting-link-group");
+    function toggle(selector, visible) {
+      document.querySelectorAll(selector).forEach(function (el) { el.hidden = !visible; });
+    }
     function update() {
       var checked = document.querySelector('input[name="type"]:checked');
-      group.hidden = !checked || checked.value !== "meeting";
+      var type = checked ? checked.value : "";
+      toggle("[data-meeting-only], [data-meeting-label]", type === "meeting");
+      toggle("[data-other-label]", type !== "meeting");
+      toggle("[data-happened-label]", type === "happened");
+      toggle("[data-other-instructions-label]", type !== "happened");
+      document.getElementById("instructions").required = type === "happened";
     }
     document.querySelectorAll('input[name="type"]').forEach(function (radio) {
       radio.addEventListener("change", update);

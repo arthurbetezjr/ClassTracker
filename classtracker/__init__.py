@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from . import timeutil
 from .extensions import csrf, db, login_manager
-from .models import ENTRY_COLORS, ENTRY_TYPES, ROLE_ADMIN, User
+from .models import ENTRY_COLORS, ENTRY_GRADIENTS, ENTRY_TYPES, ROLE_ADMIN, User
 
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_PASSWORD = "12345"
@@ -21,6 +21,9 @@ PASSWORD_CHANGE_ENDPOINTS = {"auth.account", "auth.logout"}
 # created in Neon are listed here as (table, column, DDL) and added on startup if missing.
 ADDED_COLUMNS = [
     ("entry_changes", "details", "ALTER TABLE entry_changes ADD COLUMN details TEXT NOT NULL DEFAULT ''"),
+    ("entries", "end_time", "ALTER TABLE entries ADD COLUMN end_time TIME"),
+    ("users", "failed_logins", "ALTER TABLE users ADD COLUMN failed_logins INTEGER NOT NULL DEFAULT 0"),
+    ("users", "locked_until", "ALTER TABLE users ADD COLUMN locked_until TIMESTAMP WITH TIME ZONE"),
 ]
 
 
@@ -59,7 +62,7 @@ def create_app(test_config=None):
 
     @app.context_processor
     def entry_type_info():
-        return {"ENTRY_TYPES": ENTRY_TYPES, "ENTRY_COLORS": ENTRY_COLORS}
+        return {"ENTRY_TYPES": ENTRY_TYPES, "ENTRY_COLORS": ENTRY_COLORS, "ENTRY_GRADIENTS": ENTRY_GRADIENTS}
 
     @app.before_request
     def require_login():
@@ -101,8 +104,11 @@ def _database_url():
 
 def _add_missing_columns():
     inspector = inspect(db.engine)
+    columns = {}
     for table, column, ddl in ADDED_COLUMNS:
-        if column not in {c["name"] for c in inspector.get_columns(table)}:
+        if table not in columns:
+            columns[table] = {c["name"] for c in inspector.get_columns(table)}
+        if column not in columns[table]:
             with db.engine.begin() as connection:
                 connection.execute(text(ddl))
 

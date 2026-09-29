@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "entries/_macros.html" import type_badge, author with context %}
+{% from "entries/_macros.html" import type_badge, author, time_range with context %}
 {% block title %}Entries · ClassTracker{% endblock %}
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -70,7 +70,7 @@
             <span class="d-none d-md-inline">· {{ entry.subject.name }}</span>
           </td>
           <td class="text-nowrap {% if deleted %}text-decoration-line-through{% endif %}">{{ entry.date|nice_date }}</td>
-          <td class="text-nowrap">{{ entry.time|nice_time if entry.time else "—" }}</td>
+          <td class="text-nowrap">{{ time_range(entry) }}</td>
           <td>{{ author(entry.created_by) }}</td>
         </tr>
         {% endfor %}

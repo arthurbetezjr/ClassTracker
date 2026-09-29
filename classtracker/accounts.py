@@ -61,6 +61,8 @@ def reset_password(user_id):
         return redirect(url_for("accounts.edit", user_id=user.id))
     user.set_password(password)
     user.must_change_password = True
+    user.failed_logins = 0
+    user.locked_until = None  # a reset also lifts a wrong-password lock
     db.session.commit()
     flash(f"Password for \"{user.username}\" reset. They'll choose a new one at their next login.", "success")
     return redirect(url_for("accounts.index"))

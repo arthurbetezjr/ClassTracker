@@ -14,11 +14,14 @@ def local_today():
     return dt.datetime.now(app_zone()).date()
 
 
+def as_utc(value):
+    """Stored timestamps are UTC, but SQLite hands them back without a timezone."""
+    return value.replace(tzinfo=dt.timezone.utc) if value.tzinfo is None else value
+
+
 def local_timestamp(value):
     """Format a stored UTC timestamp in the app's timezone, e.g. "Oct 5, 2026 2:30 PM"."""
-    if value.tzinfo is None:  # SQLite hands back naive datetimes; they are UTC
-        value = value.replace(tzinfo=dt.timezone.utc)
-    local = value.astimezone(app_zone())
+    local = as_utc(value).astimezone(app_zone())
     return f"{nice_date(local.date(), weekday=False)} {nice_time(local.time())}"
 
 

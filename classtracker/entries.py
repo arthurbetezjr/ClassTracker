@@ -19,6 +19,7 @@ FIELD_LABELS = {
     "subject_code": "Subject",
     "date": "Date",
     "time": "Time",
+    "end_time": "End time",
     "meeting_link": "Meeting link",
     "instructions": "Instructions",
 }
@@ -80,13 +81,21 @@ def clean(values):
         date = dt.date.fromisoformat(values["date"])
     except ValueError:
         return None, "Choose a date."
-    time = None
-    if values["time"]:
-        try:
-            time = dt.time.fromisoformat(values["time"])
-        except ValueError:
-            return None, "Enter a valid time."
-    link = values["meeting_link"] if values["type"] == "meeting" else ""
+    try:
+        time = dt.time.fromisoformat(values["time"]) if values["time"] else None
+        end_time = dt.time.fromisoformat(values["end_time"]) if values["end_time"] else None
+    except ValueError:
+        return None, "Enter a valid time."
+    is_meeting = values["type"] == "meeting"
+    if not is_meeting:
+        end_time = None
+    elif end_time and not time:
+        return None, "Add a start time too, or clear the end time."
+    elif end_time and end_time <= time:
+        return None, "The end time must be after the start time."
+    if values["type"] == "happened" and not values["instructions"]:
+        return None, "Describe what happened."
+    link = values["meeting_link"] if is_meeting else ""
     if link:
         if not URL_SCHEME.match(link):
             link = "https://" + link
@@ -99,6 +108,7 @@ def clean(values):
         "subject_code": values["subject_code"],
         "date": date,
         "time": time,
+        "end_time": end_time,
         "meeting_link": link,
         "instructions": values["instructions"],
     }
@@ -112,6 +122,7 @@ def form_values(entry):
         "subject_code": entry.subject_code,
         "date": entry.date.isoformat(),
         "time": entry.time.strftime("%H:%M") if entry.time else "",
+        "end_time": entry.end_time.strftime("%H:%M") if entry.end_time else "",
         "meeting_link": entry.meeting_link,
         "instructions": entry.instructions,
         "reason": "",
@@ -125,7 +136,7 @@ def describe(field, value):
         return ENTRY_TYPES[value]
     if field == "date":
         return nice_date(value)
-    if field == "time":
+    if field in ("time", "end_time"):
         return nice_time(value)
     return str(value)
 
@@ -138,7 +149,7 @@ def describe_changes(entry, fields):
         if old == new:
             continue
         if field == "instructions":
-            changes.append("Instructions changed")
+            changes.append("Instructions / details changed")
         else:
             changes.append(f"{FIELD_LABELS[field]}: {describe(field, old)} → {describe(field, new)}")
     return changes
@@ -182,8 +193,9 @@ def new():
               else "Create a subject first; entries belong to a subject.", "warning")
         return redirect(url_for("subjects.index"))
 
-    values = {"type": "meeting", "subject_code": request.args.get("subject", ""), "date": request.args.get("date", ""),
-              "time": "", "meeting_link": "", "instructions": "", "reason": ""}
+    values = {"type": request.args.get("type", "meeting"), "subject_code": request.args.get("subject", ""),
+              "date": request.args.get("date") or local_today().isoformat(),
+              "time": "", "end_time": "", "meeting_link": "", "instructions": "", "reason": ""}
     if request.method == "POST":
         values = read_form()
         fields, error = clean(values)
@@ -252,6 +264,11 @@ def delete(entry_id):
     return redirect(url_for("entries.detail", entry_id=entry.id))
 
 
+def at(date, time):
+    """ISO date, or date and time, in the form FullCalendar expects."""
+    return f"{date.isoformat()}T{time.strftime('%H:%M')}" if time else date.isoformat()
+
+
 @bp.get("/calendar-feed")
 def calendar_feed():
     """Entries between ?start and ?end as FullCalendar events (JSON), limited to what the user may see."""
@@ -275,13 +292,15 @@ def calendar_feed():
         events.append({
             "id": entry.id,
             "title": f"{entry.subject_code} · {ENTRY_TYPES[entry.type]}",
-            "start": f"{entry.date.isoformat()}T{entry.time.strftime('%H:%M')}" if entry.time else entry.date.isoformat(),
+            "start": at(entry.date, entry.time),
+            "end": at(entry.date, entry.end_time) if entry.end_time else None,
             "allDay": entry.time is None,
             "color": ENTRY_COLORS[entry.type],
             "url": url_for("entries.detail", entry_id=entry.id),
-            "classNames": ["entry-deleted"] if deleted else [],
+            "classNames": [f"ct-type-{entry.type}"] + (["entry-deleted"] if deleted else []),
             "extendedProps": {
                 "publicId": entry.public_id,
+                "subjectCode": entry.subject_code,
                 "subjectName": entry.subject.name,
                 "deleted": deleted,
             },

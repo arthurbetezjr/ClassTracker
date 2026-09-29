@@ -1,3 +1,5 @@
+import datetime as dt
+import math
 from functools import wraps
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
@@ -5,9 +7,12 @@ from flask_login import current_user, login_user, logout_user
 from sqlalchemy import select
 
 from .extensions import db
-from .models import User
+from .models import User, utcnow
+from .timeutil import as_utc
 
 MIN_PASSWORD_LENGTH = 8
+MAX_FAILED_LOGINS = 5
+LOCKOUT = dt.timedelta(minutes=5)
 
 bp = Blueprint("auth", __name__)
 
@@ -37,9 +42,23 @@ def login():
         user = db.session.scalar(select(User).filter_by(username=username))
         if user is None:
             flash(f"There's no account with the username \"{username}\".", "danger")
+        elif user.locked_until and as_utc(user.locked_until) > utcnow():
+            minutes = math.ceil((as_utc(user.locked_until) - utcnow()).total_seconds() / 60)
+            flash(f"Too many wrong passwords. Try again in {minutes} minute{'s' if minutes != 1 else ''}.", "danger")
         elif not user.check_password(password):
-            flash("Wrong password.", "danger")
+            user.failed_logins += 1
+            if user.failed_logins >= MAX_FAILED_LOGINS:
+                user.failed_logins = 0
+                user.locked_until = utcnow() + LOCKOUT
+                flash(f"Wrong password. Too many attempts, so this account is locked for "
+                      f"{LOCKOUT.seconds // 60} minutes.", "danger")
+            else:
+                flash("Wrong password.", "danger")
+            db.session.commit()
         else:
+            user.failed_logins = 0
+            user.locked_until = None
+            db.session.commit()
             login_user(user)
             return redirect(url_for("home"))
     return render_template("login.html")
