@@ -1,4 +1,6 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from functools import wraps
+
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_user, logout_user
 from sqlalchemy import select
 
@@ -10,12 +12,27 @@ MIN_PASSWORD_LENGTH = 8
 bp = Blueprint("auth", __name__)
 
 
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def normalize_username(username):
+    # Usernames are stored lowercase so "Juan" and "juan" can't both exist.
+    return username.strip().lower()
+
+
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("home"))
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
+        username = normalize_username(request.form.get("username", ""))
         password = request.form.get("password", "")
         user = db.session.scalar(select(User).filter_by(username=username))
         if user and user.check_password(password):

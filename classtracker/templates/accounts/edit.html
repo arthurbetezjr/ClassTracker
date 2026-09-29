@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ user.username }} · ClassTracker{% endblock %}
+{% block content %}
+<a class="d-inline-block mb-3" href="{{ url_for('accounts.index') }}">&larr; Back to accounts</a>
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h1 class="h4 mb-3">{{ user.username }}</h1>
+        <p class="text-secondary mb-0">
+          Role: {{ user.role }} · Created {{ user.created_at.strftime("%Y-%m-%d") }}
+          · Enrolled in {{ user.subjects|length }} subject{{ "" if user.subjects|length == 1 else "s" }}
+        </p>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5">Reset password</h2>
+        <p class="text-secondary small">Use this if the user forgot their password. They'll have to choose a new one at their next login.</p>
+        <form method="post" action="{{ url_for('accounts.reset_password', user_id=user.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="password">New temporary password</label>
+            <input class="form-control" id="password" name="password" type="text" autocomplete="off"
+                   minlength="{{ min_length }}" required>
+            <div class="form-text">At least {{ min_length }} characters.</div>
+          </div>
+          <button class="btn btn-primary" type="submit">Reset password</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-danger">
+      <div class="card-body">
+        <h2 class="h5 text-danger">Delete account</h2>
+        <p class="text-secondary small">This can't be undone. Entries this user created stay on the calendar.</p>
+        <form method="post" action="{{ url_for('accounts.delete', user_id=user.id) }}"
+              onsubmit="return confirm('Delete the account &quot;{{ user.username }}&quot;? This cannot be undone.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-danger" type="submit">Delete account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

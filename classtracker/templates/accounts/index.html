@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Accounts · ClassTracker{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Accounts</h1>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr><th>Username</th><th>Role</th><th>Created</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+            <tr>
+              <td>
+                {{ user.username }}
+                {% if user.must_change_password %}
+                <span class="badge text-bg-warning ms-1" title="Must choose a new password at next login">password pending</span>
+                {% endif %}
+              </td>
+              <td>{{ user.role }}</td>
+              <td>{{ user.created_at.strftime("%Y-%m-%d") }}</td>
+              <td class="text-end">
+                {% if not user.is_admin %}
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('accounts.edit', user_id=user.id) }}">Edit</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Create account</h2>
+        <form method="post" action="{{ url_for('accounts.create') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="username">Username</label>
+            <input class="form-control" id="username" name="username" autocomplete="off"
+                   pattern="[A-Za-z0-9._\-]{3,50}" required>
+            <div class="form-text">3-50 characters: letters, numbers, dots, dashes or underscores. Can't be changed later.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Starting password</label>
+            <input class="form-control" id="password" name="password" type="text" autocomplete="off"
+                   minlength="{{ min_length }}" required>
+            <div class="form-text">At least {{ min_length }} characters. Give this to the user; they'll replace it when they first log in.</div>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Create account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
