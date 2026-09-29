@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Subjects · ClassTracker{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Subjects</h1>
+<p class="text-secondary mb-4">Enroll in the subjects you want to track. Their entries will show on your calendar.</p>
+{% if subjects %}
+<div class="row g-3">
+  {% for subject in subjects %}
+  {% set is_enrolled = subject.code in enrolled %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100 shadow-sm {% if is_enrolled %}border-primary{% endif %}">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+          <span class="badge text-bg-secondary">{{ subject.code }}</span>
+          {% if is_enrolled %}<span class="badge text-bg-primary"><i class="bi bi-check-lg"></i> Enrolled</span>{% endif %}
+        </div>
+        <h2 class="h6 mt-2">{{ subject.name }}</h2>
+        {% if subject.description %}
+        <p class="small text-secondary mb-3">{{ subject.description }}</p>
+        {% endif %}
+        <form method="post" class="mt-auto"
+              action="{{ url_for('subjects.unenroll' if is_enrolled else 'subjects.enroll', code=subject.code) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if is_enrolled %}
+          <button class="btn btn-sm btn-outline-secondary" type="submit">Unenroll</button>
+          {% else %}
+          <button class="btn btn-sm btn-primary" type="submit">Enroll</button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card shadow-sm"><div class="card-body text-secondary">No subjects have been created yet. Ask the admin to add some.</div></div>
+{% endif %}
+{% endblock %}

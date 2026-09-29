@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 accounts, 4 subjects/enrollment, 5 entries, 6 calendar, 7 polish. Steps 1-3 are done.
+ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 accounts, 4 subjects/enrollment, 5 entries, 6 calendar, 7 polish. Steps 1-4 are done.
 
 ## Commands (PowerShell, from the repo root)
 
@@ -20,9 +20,11 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - `app.py`: entry point. Exposes `app = create_app()`, which Vercel and `flask --app app` both look for.
 - `classtracker/__init__.py`: `create_app()` loads config from env, wires extensions and blueprints, enforces login on every endpoint except `PUBLIC_ENDPOINTS` (and forces a password change when `must_change_password` is set), then runs `db.create_all()` and seeds the default admin. This runs on every cold start.
 - `classtracker/models.py`: the whole schema (users, subjects, enrollments, entries, entry_changes) is already defined, including tables later steps will use.
-- One blueprint per feature area (`auth.py`, `accounts.py`); `extensions.py` holds the shared `db`, `login_manager`, `csrf` objects. Admin-only views use `auth.admin_required` (the accounts blueprint applies it to every route via `before_request`).
+- One blueprint per feature area (`auth.py`, `accounts.py`, `subjects.py`); `extensions.py` holds the shared `db`, `login_manager`, `csrf` objects. Admin-only views use `auth.admin_required` (the accounts blueprint applies it to every route via `before_request`).
+- `/subjects/` renders a different template per role: admin management (`subjects/admin_index.html`) vs. user enrollment cards (`subjects/user_index.html`). Subject codes are stored uppercase, no spaces.
+- Deleting a subject relies on database `ON DELETE CASCADE` for entries and entry_changes (the ORM relationship uses `passive_deletes`). Tests turn on SQLite foreign keys in `conftest.py` so this behaves like Postgres.
 - Usernames are stored lowercase (`auth.normalize_username`) and login ignores case. The admin account can't be deleted or reset from the Accounts page.
-- Tests: `admin_client` fixture in `tests/conftest.py` is logged in as admin with the first-login password change done.
+- Tests: `admin_client` fixture in `tests/conftest.py` is logged in as admin with the first-login password change done; `switch_to_new_user` / `switch_to_admin` swap the logged-in account.
 - Every POST form must include `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` (Flask-WTF CSRFProtect).
 - Tests use in-memory SQLite with CSRF disabled (`tests/conftest.py`); keep models portable between SQLite and Postgres.
 - `requirements.txt`: runtime deps, which Vercel installs. `requirements-dev.txt` adds test tools.

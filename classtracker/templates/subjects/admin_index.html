@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Subjects · ClassTracker{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Subject management</h1>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      {% if rows %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr><th>Code</th><th>Name</th><th class="text-center">Enrolled</th><th class="text-center">Entries</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for subject, student_count, entry_count in rows %}
+            <tr>
+              <td class="fw-semibold text-nowrap">{{ subject.code }}</td>
+              <td>
+                {{ subject.name }}
+                {% if subject.description %}
+                <div class="small text-secondary text-truncate" style="max-width: 28rem;">{{ subject.description }}</div>
+                {% endif %}
+              </td>
+              <td class="text-center">{{ student_count }}</td>
+              <td class="text-center">{{ entry_count }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('subjects.edit', code=subject.code) }}">Edit</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-secondary">No subjects yet. Add the first one with the form.</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Add subject</h2>
+        <form method="post" action="{{ url_for('subjects.create') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="code">Subject code</label>
+            <input class="form-control text-uppercase" id="code" name="code" maxlength="20"
+                   pattern="[A-Za-z0-9._\-]{1,20}" autocomplete="off" required>
+            <div class="form-text">For example CS101 or MATH-2. No spaces. Can't be changed later.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="name">Subject name</label>
+            <input class="form-control" id="name" name="name" maxlength="200" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="description">Description <span class="text-secondary">(optional)</span></label>
+            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Add subject</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

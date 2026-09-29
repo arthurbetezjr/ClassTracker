@@ -1,6 +1,17 @@
+import sqlite3
+
 import pytest
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 from classtracker import create_app
+
+
+@event.listens_for(Engine, "connect")
+def _enable_sqlite_foreign_keys(dbapi_connection, _):
+    # SQLite ignores foreign keys unless asked; turn them on so cascades behave like Postgres.
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        dbapi_connection.execute("PRAGMA foreign_keys=ON")
 
 
 @pytest.fixture
@@ -36,3 +47,18 @@ def change_password(client, current, new, confirm=None):
         "new_password": new,
         "confirm_password": new if confirm is None else confirm,
     })
+
+
+def switch_to_new_user(admin_client, username="juan"):
+    """As admin, create a user; then log in as them with their password already changed."""
+    admin_client.post("/accounts/", data={"username": username, "password": "startpass1"})
+    admin_client.post("/logout")
+    login(admin_client, username, "startpass1")
+    change_password(admin_client, "startpass1", "userpass1")
+    return admin_client
+
+
+def switch_to_admin(client):
+    client.post("/logout")
+    login(client, "admin", "adminpass1")
+    return client

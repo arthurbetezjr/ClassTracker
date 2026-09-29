@@ -38,10 +38,11 @@ def create_app(test_config=None):
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
 
-    from . import accounts, auth
+    from . import accounts, auth, subjects
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(accounts.bp)
+    app.register_blueprint(subjects.bp)
 
     @app.before_request
     def require_login():

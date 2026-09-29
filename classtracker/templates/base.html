@@ -21,6 +21,9 @@
           <li class="nav-item">
             <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">Home</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.blueprint == 'subjects' %}active{% endif %}" href="{{ url_for('subjects.index') }}">Subjects</a>
+          </li>
           {% if current_user.is_admin %}
           <li class="nav-item">
             <a class="nav-link {% if request.blueprint == 'accounts' %}active{% endif %}" href="{{ url_for('accounts.index') }}">Accounts</a>
