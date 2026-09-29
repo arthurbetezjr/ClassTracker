@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-ClassTracker is a shared class calendar webapp. Only the project skeleton exists so far; the plan below is agreed.
+ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 accounts, 4 subjects/enrollment, 5 entries, 6 calendar, 7 polish. Steps 1-2 are done.
 
 ## Commands (PowerShell, from the repo root)
 
@@ -12,13 +12,17 @@ ClassTracker is a shared class calendar webapp. Only the project skeleton exists
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt   # install deps
 .\.venv\Scripts\python.exe -m flask --app app run --debug          # run at http://127.0.0.1:5000
 .\.venv\Scripts\python.exe -m pytest                                # all tests
-.\.venv\Scripts\python.exe -m pytest tests/test_home.py::test_home_page_loads   # one test
+.\.venv\Scripts\python.exe -m pytest tests/test_auth.py::test_logout_ends_session   # one test
 ```
 
 ## Layout
 
 - `app.py`: entry point. Exposes `app = create_app()`, which Vercel and `flask --app app` both look for.
-- `classtracker/`: the application package (`create_app` lives in `__init__.py`, templates in `templates/`).
+- `classtracker/__init__.py`: `create_app()` loads config from env, wires extensions and blueprints, enforces login on every endpoint except `PUBLIC_ENDPOINTS` (and forces a password change when `must_change_password` is set), then runs `db.create_all()` and seeds the default admin. This runs on every cold start.
+- `classtracker/models.py`: the whole schema (users, subjects, enrollments, entries, entry_changes) is already defined, including tables later steps will use.
+- One blueprint per feature area (`auth.py` so far); `extensions.py` holds the shared `db`, `login_manager`, `csrf` objects.
+- Every POST form must include `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` (Flask-WTF CSRFProtect).
+- Tests use in-memory SQLite with CSRF disabled (`tests/conftest.py`); keep models portable between SQLite and Postgres.
 - `requirements.txt`: runtime deps, which Vercel installs. `requirements-dev.txt` adds test tools.
 - Static assets come from CDNs (Bootstrap, FullCalendar). Anything self-hosted must go in `public/`, because Vercel serves static files from there, not from Flask's static folder.
 
@@ -27,8 +31,11 @@ ClassTracker is a shared class calendar webapp. Only the project skeleton exists
 - **Python + Flask** server with HTML templates (Jinja) and Bootstrap
 - **FullCalendar** for the monthly calendar view
 - **Postgres on Neon**, connected through Vercel's Storage integration. The connection string comes from the `DATABASE_URL` environment variable. Local development uses a separate Neon branch, not the production database.
-- **SQLAlchemy** for database access
-- Deployed on **Vercel** (Python runtime, serverless), auto-deployed from GitHub `main`. Serverless means no local files persist between requests, so all state goes in Postgres and sessions use signed cookies.
+- **SQLAlchemy 2** (via Flask-SQLAlchemy), **Flask-Login** for sessions, **Flask-WTF** for CSRF
+- There are no migrations: `create_all()` only creates missing tables and never alters existing ones. Changing a column on a table that already exists in Neon needs a manual `ALTER TABLE` on both the `dev` and production branches.
+- Deployed on **Vercel** (Python runtime, serverless), auto-deployed from GitHub `main`. The Vercel project's Framework Preset must be **Flask**; with "Other" every URL returns 404.
+- Serverless means no local files persist between requests, so all state goes in Postgres and sessions use signed cookies.
+- Required env vars: `DATABASE_URL` and `SECRET_KEY`. Locally they're in `.env` (git-ignored; `DATABASE_URL` points to the Neon `dev` branch). On Vercel they're set in the project's Environment Variables.
 - Passwords are stored as hashes only.
 
 ## Domain rules

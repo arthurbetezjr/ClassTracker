@@ -9,10 +9,26 @@
 <body class="bg-light">
   <nav class="navbar navbar-dark bg-primary mb-4">
     <div class="container">
-      <a class="navbar-brand" href="/">ClassTracker</a>
+      <a class="navbar-brand" href="{{ url_for('home') }}">ClassTracker</a>
+      {% if current_user.is_authenticated %}
+      <div class="d-flex align-items-center gap-2">
+        <span class="navbar-text text-white">
+          {{ current_user.username }}
+          {% if current_user.is_admin %}<span class="badge bg-light text-primary ms-1">admin</span>{% endif %}
+        </span>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('auth.account') }}">Account settings</a>
+        <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-light" type="submit">Log out</button>
+        </form>
+      </div>
+      {% endif %}
     </div>
   </nav>
   <main class="container">
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+    <div class="alert alert-{{ category if category != 'message' else 'info' }}">{{ message }}</div>
+    {% endfor %}
     {% block content %}{% endblock %}
   </main>
 </body>
