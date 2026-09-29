@@ -9,7 +9,13 @@ def test_anonymous_visitor_is_sent_to_login(client):
 
 def test_wrong_password_is_rejected(client):
     response = login(client, password="wrong")
-    assert b"Wrong username or password" in response.data
+    assert b"Wrong password" in response.data
+
+
+def test_unknown_username_is_reported(client):
+    response = login(client, username="nobody")
+    assert b"no account with the username" in response.data
+    assert b"nobody" in response.data
 
 
 def test_default_admin_must_change_password_first(client):
@@ -33,7 +39,7 @@ def test_password_change_unlocks_app_and_replaces_old_password(client):
     assert client.get("/").status_code == 200
 
     client.post("/logout")
-    assert b"Wrong username or password" in login(client, password="12345").data
+    assert b"Wrong password" in login(client, password="12345").data
     assert login(client, password="newpassword1").status_code == 302
     assert client.get("/").status_code == 200
 

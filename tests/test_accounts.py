@@ -54,7 +54,7 @@ def test_reset_password_forces_change(app, admin_client):
     admin_client.post(f"/accounts/{user_id}/reset-password", data={"password": "temporary1"})
     admin_client.post("/logout")
 
-    assert b"Wrong username or password" in login(admin_client, "juan", "juanspass1").data
+    assert b"Wrong password" in login(admin_client, "juan", "juanspass1").data
     login(admin_client, "juan", "temporary1")
     assert admin_client.get("/").headers["Location"].endswith("/account")
 

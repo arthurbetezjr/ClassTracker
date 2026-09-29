@@ -35,10 +35,13 @@ def login():
         username = normalize_username(request.form.get("username", ""))
         password = request.form.get("password", "")
         user = db.session.scalar(select(User).filter_by(username=username))
-        if user and user.check_password(password):
+        if user is None:
+            flash(f"There's no account with the username \"{username}\".", "danger")
+        elif not user.check_password(password):
+            flash("Wrong password.", "danger")
+        else:
             login_user(user)
             return redirect(url_for("home"))
-        flash("Wrong username or password.", "danger")
     return render_template("login.html")
 
 
