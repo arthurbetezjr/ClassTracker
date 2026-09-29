@@ -33,7 +33,7 @@ def create_app(test_config=None):
         SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True},
         SESSION_COOKIE_SECURE="VERCEL" in os.environ,
         SESSION_COOKIE_SAMESITE="Lax",
-        APP_TIMEZONE=os.environ.get("APP_TIMEZONE", "UTC"),
+        APP_TIMEZONE=os.environ.get("APP_TIMEZONE", "Asia/Manila"),
     )
     if test_config:
         app.config.update(test_config)

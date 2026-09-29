@@ -42,7 +42,7 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - There are no migrations: `create_all()` only creates missing tables. To add a column to a table that already exists in Neon, add the model field *and* an entry to `ADDED_COLUMNS` in `classtracker/__init__.py`, which adds it on startup if it's missing. Anything beyond adding columns (renames, type changes) needs a manual `ALTER TABLE` on both the `dev` and production branches.
 - Deployed on **Vercel** (Python runtime, serverless), auto-deployed from GitHub `main`. The Vercel project's Framework Preset must be **Flask**; with "Other" every URL returns 404.
 - Serverless means no local files persist between requests, so all state goes in Postgres and sessions use signed cookies.
-- Required env vars: `DATABASE_URL` and `SECRET_KEY`. Optional: `APP_TIMEZONE` (IANA name, default `UTC`). Locally they're in `.env` (git-ignored; `DATABASE_URL` points to the Neon `dev` branch). On Vercel they're set in the project's Environment Variables.
+- Required env vars: `DATABASE_URL` and `SECRET_KEY`. Optional: `APP_TIMEZONE` (IANA name, default `Asia/Manila`, where the users are). Locally they're in `.env` (git-ignored; `DATABASE_URL` points to the Neon `dev` branch). On Vercel they're set in the project's Environment Variables.
 - Passwords are stored as hashes only.
 
 ## Domain rules
