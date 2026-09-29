@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "entries/_macros.html" import type_badge, author with context %}
+{% block title %}Entries · ClassTracker{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Entries</h1>
+  <div class="d-flex gap-2">
+    {% if current_user.is_admin %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('entries.log') }}"><i class="bi bi-clock-history"></i> Change log</a>
+    {% endif %}
+    <a class="btn btn-primary" href="{{ url_for('entries.new') }}"><i class="bi bi-plus-lg"></i> Add entry</a>
+  </div>
+</div>
+
+<form class="card card-body shadow-sm mb-3" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-sm-6 col-md-4">
+      <label class="form-label small mb-1" for="f-subject">Subject</label>
+      <select class="form-select" id="f-subject" name="subject">
+        <option value="">All {{ "subjects" if current_user.is_admin else "my subjects" }}</option>
+        {% for subject in subjects %}
+        <option value="{{ subject.code }}" {% if filters.subject == subject.code %}selected{% endif %}>{{ subject.code }} · {{ subject.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <label class="form-label small mb-1" for="f-type">Type</label>
+      <select class="form-select" id="f-type" name="type">
+        <option value="">All types</option>
+        {% for key, label in ENTRY_TYPES.items() %}
+        <option value="{{ key }}" {% if filters.type == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <label class="form-label small mb-1" for="f-when">When</label>
+      <select class="form-select" id="f-when" name="when">
+        <option value="upcoming" {% if filters.when == "upcoming" %}selected{% endif %}>Today and later</option>
+        <option value="past" {% if filters.when == "past" %}selected{% endif %}>Past</option>
+        <option value="all" {% if filters.when == "all" %}selected{% endif %}>All dates</option>
+      </select>
+    </div>
+    <div class="col-sm-6 col-md-2">
+      <button class="btn btn-outline-primary w-100" type="submit">Filter</button>
+    </div>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  {% if entries %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th>ID</th><th>Type</th><th>Subject</th><th>Date</th><th>Time</th><th>Added by</th></tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+        {% set deleted = entry.deleted_at is not none %}
+        <tr class="{% if deleted %}text-secondary{% endif %}" style="cursor: pointer;"
+            onclick="window.location='{{ url_for('entries.detail', entry_id=entry.id) }}'">
+          <td class="text-nowrap">
+            <a href="{{ url_for('entries.detail', entry_id=entry.id) }}" class="{% if deleted %}link-secondary{% endif %}">{{ entry.public_id }}</a>
+          </td>
+          <td class="text-nowrap">
+            {{ type_badge(entry.type) }}
+            {% if deleted %}<span class="badge text-bg-dark">Deleted</span>{% endif %}
+          </td>
+          <td class="{% if deleted %}text-decoration-line-through{% endif %}">
+            <span class="fw-semibold">{{ entry.subject_code }}</span>
+            <span class="d-none d-md-inline">· {{ entry.subject.name }}</span>
+          </td>
+          <td class="text-nowrap {% if deleted %}text-decoration-line-through{% endif %}">{{ entry.date|nice_date }}</td>
+          <td class="text-nowrap">{{ entry.time|nice_time if entry.time else "—" }}</td>
+          <td>{{ author(entry.created_by) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-secondary">
+    No entries match.
+    {% if filters.when == "upcoming" %}Try <a href="{{ url_for('entries.index', subject=filters.subject, type=filters.type, when='all') }}">all dates</a>.{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

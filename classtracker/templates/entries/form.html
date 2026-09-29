@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit " ~ entry.public_id if entry else "Add entry" }} · ClassTracker{% endblock %}
+{% block content %}
+<a class="d-inline-block mb-3"
+   href="{{ url_for('entries.detail', entry_id=entry.id) if entry else url_for('entries.index') }}">&larr; Back</a>
+<div class="row justify-content-center">
+  <div class="col-md-9 col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3">{{ "Edit " ~ entry.public_id if entry else "Add entry" }}</h1>
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <span class="form-label d-block">Type</span>
+            <div class="btn-group flex-wrap" role="group" aria-label="Entry type">
+              {% for key, label in ENTRY_TYPES.items() %}
+              <input type="radio" class="btn-check" name="type" id="type-{{ key }}" value="{{ key }}"
+                     {% if values.type == key %}checked{% endif %} required>
+              <label class="btn btn-outline-secondary" for="type-{{ key }}">
+                <i class="bi bi-circle-fill me-1" style="color: {{ ENTRY_COLORS[key] }};"></i>{{ label }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="subject_code">Subject</label>
+            <select class="form-select" id="subject_code" name="subject_code" required>
+              <option value="" disabled {% if not values.subject_code %}selected{% endif %}>Choose a subject</option>
+              {% for subject in subjects %}
+              <option value="{{ subject.code }}" {% if values.subject_code == subject.code %}selected{% endif %}>{{ subject.code }} · {{ subject.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="date">Date</label>
+              <input class="form-control" id="date" name="date" type="date" value="{{ values.date }}" required>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="time">Time <span class="text-secondary">(optional)</span></label>
+              <input class="form-control" id="time" name="time" type="time" value="{{ values.time }}">
+            </div>
+          </div>
+
+          <div class="mb-3" id="meeting-link-group">
+            <label class="form-label" for="meeting_link">Meeting link <span class="text-secondary">(optional)</span></label>
+            <input class="form-control" id="meeting_link" name="meeting_link" type="text" inputmode="url"
+                   maxlength="500" placeholder="https://..." value="{{ values.meeting_link }}">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="instructions">Additional instructions <span class="text-secondary">(optional)</span></label>
+            <textarea class="form-control" id="instructions" name="instructions" rows="4">{{ values.instructions }}</textarea>
+          </div>
+
+          {% if needs_reason %}
+          <div class="mb-3">
+            <label class="form-label" for="reason">Reason for this edit</label>
+            <textarea class="form-control" id="reason" name="reason" rows="2" required>{{ values.reason }}</textarea>
+            <div class="form-text">This entry was added by someone else. Your reason goes in the change log.</div>
+          </div>
+          {% endif %}
+
+          <button class="btn btn-primary" type="submit">{{ "Save changes" if entry else "Add entry" }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // Only Cycle Meetings have a meeting link.
+  (function () {
+    var group = document.getElementById("meeting-link-group");
+    function update() {
+      var checked = document.querySelector('input[name="type"]:checked');
+      group.hidden = !checked || checked.value !== "meeting";
+    }
+    document.querySelectorAll('input[name="type"]').forEach(function (radio) {
+      radio.addEventListener("change", update);
+    });
+    update();
+  })();
+</script>
+{% endblock %}

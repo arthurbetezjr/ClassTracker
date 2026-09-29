@@ -12,6 +12,8 @@ ROLE_ADMIN = "admin"
 ROLE_USER = "user"
 
 ENTRY_TYPES = {"meeting": "Cycle Meeting", "task": "Task", "exam": "Exam"}
+# Dark enough for white text to stay readable (WCAG AA).
+ENTRY_COLORS = {"meeting": "#0d6efd", "task": "#c2410c", "exam": "#dc3545"}
 
 
 def utcnow():
@@ -91,7 +93,7 @@ class Entry(db.Model):
 
 
 class EntryChange(db.Model):
-    """Admin change log: every admin edit or delete of an entry, with the reason."""
+    """Change log shown to the admin: every edit or delete of an entry, by anyone."""
 
     __tablename__ = "entry_changes"
 
@@ -99,6 +101,7 @@ class EntryChange(db.Model):
     entry_id: Mapped[int] = mapped_column(ForeignKey("entries.id", ondelete="CASCADE"))
     action: Mapped[str] = mapped_column(String(10))  # "edit" or "delete"
     reason: Mapped[str] = mapped_column(Text)
+    details: Mapped[str] = mapped_column(Text, default="", server_default="")  # what an edit changed
     actor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
