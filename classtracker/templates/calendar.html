@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Calendar · ClassTracker{% endblock %}
+{% block content %}
+<style>
+  #calendar { --fc-today-bg-color: rgba(13, 110, 253, .08); }
+  #calendar .fc-toolbar-title { font-size: 1.35rem; }
+  #calendar .fc-daygrid-day { cursor: pointer; }
+  #calendar .fc-event { cursor: pointer; }
+  #calendar .entry-deleted { opacity: .5; }
+  #calendar .entry-deleted .fc-event-title,
+  #calendar .entry-deleted .fc-list-event-title { text-decoration: line-through; }
+  @media (max-width: 575.98px) {
+    #calendar .fc-header-toolbar { flex-direction: column; gap: .5rem; }
+  }
+</style>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Calendar</h1>
+  {% if subjects %}
+  <a class="btn btn-primary" href="{{ url_for('entries.new') }}"><i class="bi bi-plus-lg"></i> Add entry</a>
+  {% endif %}
+</div>
+
+{% if not subjects %}
+<div class="alert alert-info">
+  {% if current_user.is_admin %}
+  No subjects yet. <a href="{{ url_for('subjects.index') }}">Create a subject</a> to start adding entries.
+  {% else %}
+  You're not enrolled in any subjects yet. <a href="{{ url_for('subjects.index') }}">Enroll in subjects</a> to see their entries here.
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card card-body shadow-sm mb-3">
+  <div class="d-flex flex-wrap align-items-center gap-3">
+    <select class="form-select w-auto" id="subject-filter" aria-label="Subject">
+      <option value="">All {{ "subjects" if current_user.is_admin else "my subjects" }}</option>
+      {% for subject in subjects %}
+      <option value="{{ subject.code }}">{{ subject.code }} · {{ subject.name }}</option>
+      {% endfor %}
+    </select>
+    {% for key, label in ENTRY_TYPES.items() %}
+    <div class="form-check form-check-inline m-0">
+      <input class="form-check-input type-filter" type="checkbox" id="show-{{ key }}" value="{{ key }}" checked
+             style="background-color: {{ ENTRY_COLORS[key] }}; border-color: {{ ENTRY_COLORS[key] }};">
+      <label class="form-check-label" for="show-{{ key }}">{{ label }}</label>
+    </div>
+    {% endfor %}
+    <div class="form-check form-check-inline m-0">
+      <input class="form-check-input" type="checkbox" id="show-deleted" checked>
+      <label class="form-check-label text-secondary" for="show-deleted">Show deleted</label>
+    </div>
+    <div class="spinner-border spinner-border-sm text-primary ms-auto" id="calendar-loading" role="status" hidden>
+      <span class="visually-hidden">Loading…</span>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div id="calendar"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var subjectFilter = document.getElementById("subject-filter");
+    var typeFilters = document.querySelectorAll(".type-filter");
+    var showDeleted = document.getElementById("show-deleted");
+    var canAdd = {{ "true" if subjects else "false" }};
+
+    var calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
+      initialView: window.innerWidth < 768 ? "listMonth" : "dayGridMonth",
+      headerToolbar: { left: "prev,next today", center: "title", right: "dayGridMonth,listMonth" },
+      buttonText: { today: "Today", month: "Month", list: "List" },
+      height: "auto",
+      dayMaxEvents: 3,
+      eventDisplay: "block",
+      eventTimeFormat: { hour: "numeric", minute: "2-digit", meridiem: "short" },
+      noEventsContent: "No entries this month",
+      events: {
+        url: "{{ url_for('entries.calendar_feed') }}",
+        extraParams: function () {
+          var types = Array.prototype.filter.call(typeFilters, function (box) { return box.checked; })
+            .map(function (box) { return box.value; });
+          return { subject: subjectFilter.value, types: types.join(","), deleted: showDeleted.checked ? "1" : "0" };
+        },
+        failure: function () { alert("Couldn't load the calendar entries. Please refresh the page."); }
+      },
+      loading: function (isLoading) {
+        document.getElementById("calendar-loading").hidden = !isLoading;
+      },
+      eventDidMount: function (info) {
+        var props = info.event.extendedProps;
+        info.el.title = props.publicId + " · " + props.subjectName + (props.deleted ? " (deleted)" : "");
+      },
+      dateClick: function (info) {
+        // Clicking an empty spot on a day starts a new entry on that date.
+        if (canAdd) {
+          window.location = "{{ url_for('entries.new') }}?date=" + info.dateStr;
+        }
+      }
+    });
+    calendar.render();
+
+    [subjectFilter, showDeleted].concat(Array.prototype.slice.call(typeFilters)).forEach(function (control) {
+      control.addEventListener("change", function () { calendar.refetchEvents(); });
+    });
+  });
+</script>
+{% endblock %}

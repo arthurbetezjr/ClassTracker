@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 accounts, 4 subjects/enrollment, 5 entries, 6 calendar, 7 polish. Steps 1-5 are done.
+ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 accounts, 4 subjects/enrollment, 5 entries, 6 calendar, 7 polish. Steps 1-6 are done.
 
 ## Commands (PowerShell, from the repo root)
 
@@ -24,6 +24,7 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - `/subjects/` renders a different template per role: admin management (`subjects/admin_index.html`) vs. user enrollment cards (`subjects/user_index.html`). Subject codes are stored uppercase, no spaces.
 - Deleting a subject relies on database `ON DELETE CASCADE` for entries and entry_changes (the ORM relationship uses `passive_deletes`). Tests turn on SQLite foreign keys in `conftest.py` so this behaves like Postgres.
 - `entries.py` owns the permission rules: `visible_entries()` (the base query for anything that lists entries, including the future calendar), `allowed_subjects()`, `can_change()`, `edit_needs_reason()`. Reuse them rather than re-deriving access rules.
+- The home page `/` is the calendar (`templates/calendar.html`, FullCalendar 6 from jsDelivr). It loads events as JSON from `entries.calendar_feed` (`/entries/calendar-feed?start&end[&subject][&types][&deleted=0]`), which is built on `visible_entries()`. Clicking an empty day opens `/entries/new?date=...`.
 - `timeutil.py`: "today" and timestamp display use `APP_TIMEZONE`; Jinja filters `nice_date`, `nice_time`, `local_timestamp`. `ENTRY_TYPES` / `ENTRY_COLORS` are available in every template. Templates importing `entries/_macros.html` must use `with context`.
 - Meeting links are forced to http(s) in `entries.clean()` because they're rendered as `href`s.
 - Usernames are stored lowercase (`auth.normalize_username`) and login ignores case. The admin account can't be deleted or reset from the Accounts page.

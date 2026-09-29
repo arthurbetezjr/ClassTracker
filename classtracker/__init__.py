@@ -74,7 +74,7 @@ def create_app(test_config=None):
 
     @app.get("/")
     def home():
-        return render_template("home.html")
+        return render_template("calendar.html", subjects=entries.allowed_subjects())
 
     with app.app_context():
         db.create_all()

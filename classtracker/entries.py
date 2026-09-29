@@ -1,14 +1,14 @@
 import datetime as dt
 import re
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from .auth import admin_required
 from .extensions import db
-from .models import ENTRY_TYPES, Entry, EntryChange, Subject, enrollments, utcnow
+from .models import ENTRY_COLORS, ENTRY_TYPES, Entry, EntryChange, Subject, enrollments, utcnow
 from .timeutil import local_today, nice_date, nice_time
 
 bp = Blueprint("entries", __name__, url_prefix="/entries")
@@ -250,6 +250,43 @@ def delete(entry_id):
     db.session.commit()
     flash(f"{entry.public_id} deleted. It stays visible, marked as deleted, with your reason.", "success")
     return redirect(url_for("entries.detail", entry_id=entry.id))
+
+
+@bp.get("/calendar-feed")
+def calendar_feed():
+    """Entries between ?start and ?end as FullCalendar events (JSON), limited to what the user may see."""
+    try:
+        # FullCalendar sends e.g. "2026-09-28T00:00:00+08:00"; only the date part matters.
+        start = dt.date.fromisoformat(request.args["start"][:10])
+        end = dt.date.fromisoformat(request.args["end"][:10])
+    except (KeyError, ValueError):
+        abort(400)
+    query = visible_entries().where(Entry.date >= start, Entry.date < end).order_by(Entry.date, Entry.time)
+    if subject := request.args.get("subject"):
+        query = query.where(Entry.subject_code == subject)
+    if "types" in request.args:  # present but empty means every type is switched off
+        query = query.where(Entry.type.in_([t for t in request.args["types"].split(",") if t in ENTRY_TYPES]))
+    if request.args.get("deleted") == "0":
+        query = query.where(Entry.deleted_at.is_(None))
+
+    events = []
+    for entry in db.session.scalars(query):
+        deleted = entry.deleted_at is not None
+        events.append({
+            "id": entry.id,
+            "title": f"{entry.subject_code} · {ENTRY_TYPES[entry.type]}",
+            "start": f"{entry.date.isoformat()}T{entry.time.strftime('%H:%M')}" if entry.time else entry.date.isoformat(),
+            "allDay": entry.time is None,
+            "color": ENTRY_COLORS[entry.type],
+            "url": url_for("entries.detail", entry_id=entry.id),
+            "classNames": ["entry-deleted"] if deleted else [],
+            "extendedProps": {
+                "publicId": entry.public_id,
+                "subjectName": entry.subject.name,
+                "deleted": deleted,
+            },
+        })
+    return jsonify(events)
 
 
 @bp.get("/log")

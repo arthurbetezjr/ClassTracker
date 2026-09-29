@@ -19,7 +19,7 @@
       <div class="collapse navbar-collapse" id="mainNav">
         <ul class="navbar-nav me-auto">
           <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">Home</a>
+            <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">Calendar</a>
           </li>
           <li class="nav-item">
             <a class="nav-link {% if request.blueprint == 'entries' %}active{% endif %}" href="{{ url_for('entries.index') }}">Entries</a>
