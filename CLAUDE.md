@@ -19,8 +19,8 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 
 - `app.py`: entry point. Exposes `app = create_app()`, which Vercel and `flask --app app` both look for.
 - `classtracker/__init__.py`: `create_app()` loads config from env, wires extensions and blueprints, enforces login on every endpoint except `PUBLIC_ENDPOINTS` (and forces a password change when `must_change_password` is set), then runs `db.create_all()` and seeds the default admin. This runs on every cold start.
-- `classtracker/models.py`: the whole schema (users, subjects, enrollments, entries, entry_changes) is already defined, including tables later steps will use.
-- One blueprint per feature area (`auth.py`, `accounts.py`, `subjects.py`, `entries.py`); `extensions.py` holds the shared `db`, `login_manager`, `csrf` objects. Admin-only views use `auth.admin_required` (the accounts blueprint applies it to every route via `before_request`).
+- `classtracker/models.py`: the whole schema (users, subjects, enrollments, entries, entry_changes, announcements, announcement_dismissals).
+- One blueprint per feature area (`auth.py`, `accounts.py`, `subjects.py`, `entries.py`, `announcements.py`); `extensions.py` holds the shared `db`, `login_manager`, `csrf` objects. Admin-only views use `auth.admin_required` (the accounts blueprint applies it to every route via `before_request`).
 - `/subjects/` renders a different template per role: admin management (`subjects/admin_index.html`) vs. user enrollment cards (`subjects/user_index.html`). Subject codes are stored uppercase, no spaces.
 - Deleting a subject relies on database `ON DELETE CASCADE` for entries and entry_changes (the ORM relationship uses `passive_deletes`). Tests turn on SQLite foreign keys in `conftest.py` so this behaves like Postgres.
 - `entries.py` owns the permission rules: `visible_entries()` (the base query for anything that lists entries, including the future calendar), `allowed_subjects()`, `can_change()`, `edit_needs_reason()`. Reuse them rather than re-deriving access rules.
@@ -31,6 +31,7 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - Meeting links are forced to http(s) in `entries.clean()` because they're rendered as `href`s.
 - Usernames are stored lowercase (`auth.normalize_username`) and login ignores case. The admin account can't be deleted or reset from the Accounts page.
 - The Accounts page also has a bulk form (`accounts.create_many`, `POST /accounts/bulk`): one username per line plus a shared starting password. It skips existing usernames and creates nothing if any line is invalid. It was built (2026-10-01) to add the 46-student class roster.
+- Announcements (`announcements.py`, added 2026-10-01): the admin posts and deletes them at `/announcements/`. A context processor passes `open_announcements` (ones the current user hasn't closed) to every template, and `base.html` draws them as cards above the page content. The × button posts to `announcements.dismiss` in the background (`X-Requested-With: fetch` gets a 204; a plain form post redirects back) and stores a row in `announcement_dismissals`.
 - Tests set `PASSWORD_HASH_METHOD` to a cheap pbkdf2 so the suite runs in seconds; production uses scrypt.
 - Tests: `admin_client` fixture in `tests/conftest.py` is logged in as admin with the first-login password change done; `switch_to_new_user` / `switch_to_admin` swap the logged-in account.
 - Every POST form must include `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` (Flask-WTF CSRFProtect).
@@ -61,6 +62,7 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - Every delete needs a reason. Edits need a reason only when the editor didn't create the entry (i.e. the admin editing someone else's).
 - Deleted entries are soft-deleted: they stay visible to everyone in the subject, marked deleted, with the reason, and can no longer be edited. Every edit and delete (by anyone) is recorded in `entry_changes` with what changed; only the admin sees this change log.
 - Deleting a user keeps the entries they created.
+- Announcements: only the admin posts or deletes them (no editing; delete and repost). Each one shows on every page for every account, including accounts created later, until that user closes it. Closing is saved per account, so it stays closed on all devices. Plain text, line breaks kept.
 - Login: 5 wrong passwords in a row lock that account for 5 minutes (`users.failed_logins`, `users.locked_until`); an admin password reset lifts the lock.
 
 ## Repository

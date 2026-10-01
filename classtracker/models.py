@@ -119,3 +119,25 @@ class EntryChange(db.Model):
 
     entry: Mapped[Entry] = relationship()
     actor: Mapped[Optional[User]] = relationship()
+
+
+# Which users closed which announcement, so it stays closed on every device they use.
+announcement_dismissals = db.Table(
+    "announcement_dismissals",
+    db.Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("announcement_id", ForeignKey("announcements.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Announcement(db.Model):
+    """A notice the admin posts; it shows as a card on every page until each user closes it."""
+
+    __tablename__ = "announcements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(200), default="")
+    body: Mapped[str] = mapped_column(Text)
+    created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    created_by: Mapped[Optional[User]] = relationship()

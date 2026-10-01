@@ -49,12 +49,13 @@ def create_app(test_config=None):
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
 
-    from . import accounts, auth, entries, subjects
+    from . import accounts, announcements, auth, entries, subjects
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(accounts.bp)
     app.register_blueprint(subjects.bp)
     app.register_blueprint(entries.bp)
+    app.register_blueprint(announcements.bp)
 
     app.jinja_env.filters["nice_date"] = timeutil.nice_date
     app.jinja_env.filters["nice_time"] = timeutil.nice_time
@@ -63,6 +64,12 @@ def create_app(test_config=None):
     @app.context_processor
     def entry_type_info():
         return {"ENTRY_TYPES": ENTRY_TYPES, "ENTRY_COLORS": ENTRY_COLORS, "ENTRY_GRADIENTS": ENTRY_GRADIENTS}
+
+    @app.context_processor
+    def open_announcements():
+        # base.html shows these as closable cards at the top of every page.
+        shown = announcements.open_announcements() if current_user.is_authenticated else []
+        return {"open_announcements": shown}
 
     @app.before_request
     def require_login():

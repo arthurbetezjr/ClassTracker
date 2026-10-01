@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Announcements · ClassTracker{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Announcements</h1>
+<div class="row g-4">
+  <div class="col-lg-8">
+    {% for announcement in announcements %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            {% if announcement.title %}<h2 class="h6 mb-1">{{ announcement.title }}</h2>{% endif %}
+            <div class="ct-pre-line">{{ announcement.body }}</div>
+            <div class="small text-body-secondary mt-2">
+              Posted {{ announcement.created_at | local_timestamp }}
+              {% if announcement.created_by %}by {{ announcement.created_by.username }}{% endif %}
+            </div>
+          </div>
+          <form method="post" action="{{ url_for('announcements.delete', announcement_id=announcement.id) }}" class="m-0"
+                onsubmit="return confirm('Delete this announcement for everyone?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-body-secondary">No announcements yet.</p>
+    {% endfor %}
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Post announcement</h2>
+        <form method="post" action="{{ url_for('announcements.create') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="title">Title <span class="text-body-secondary">(optional)</span></label>
+            <input class="form-control" id="title" name="title" maxlength="{{ max_title }}" autocomplete="off">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="body">Message</label>
+            <textarea class="form-control" id="body" name="body" rows="5" required></textarea>
+            <div class="form-text">Shows on every page for all accounts until each person closes it.</div>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Post</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

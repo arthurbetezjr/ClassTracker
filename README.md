@@ -1,6 +1,6 @@
 # ClassTracker
 
-A shared class calendar. The admin manages subjects and accounts; users enroll in subjects and see (and contribute) meetings, tasks, and exams for those subjects on a monthly calendar.
+A shared class calendar. The admin manages subjects and accounts; users enroll in subjects and see (and contribute) meetings, tasks, and exams for those subjects on a monthly calendar. The admin can also post announcements that appear for everyone until they close them.
 
 Built with Python + Flask, deployed on Vercel.
 
