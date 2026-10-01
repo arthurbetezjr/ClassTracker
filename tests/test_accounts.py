@@ -73,3 +73,29 @@ def test_admin_account_is_protected(app, admin_client):
     admin_client.post(f"/accounts/{admin_id}/reset-password", data={"password": "hijacked1"})
     admin = get_user(app, "admin")
     assert admin is not None and admin.check_password("adminpass1")
+
+
+def test_bulk_create_accounts(app, admin_client):
+    create_user(admin_client, "juan")
+    response = admin_client.post(
+        "/accounts/bulk",
+        data={"usernames": "MariaClara\n\n  Pedro  \nmariaclara\nJuan\n", "password": "12345678"},
+        follow_redirects=True,
+    )
+    assert b"2 account(s) created" in response.data
+    assert b"Skipped (already exist): juan" in response.data
+    for name in ("mariaclara", "pedro"):
+        user = get_user(app, name)
+        assert user.role == "user" and user.must_change_password and user.check_password("12345678")
+
+
+def test_bulk_create_rejects_whole_list_if_any_invalid(app, admin_client):
+    response = admin_client.post(
+        "/accounts/bulk", data={"usernames": "maria\nbad name\nab", "password": "12345678"}, follow_redirects=True
+    )
+    assert b"No accounts created" in response.data and b"bad name, ab" in response.data
+    assert get_user(app, "maria") is None
+    assert b"at least 8" in admin_client.post(
+        "/accounts/bulk", data={"usernames": "maria", "password": "short"}, follow_redirects=True
+    ).data
+    assert get_user(app, "maria") is None

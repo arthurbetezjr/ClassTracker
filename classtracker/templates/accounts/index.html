@@ -55,6 +55,26 @@
         </form>
       </div>
     </div>
+    <div class="card shadow-sm mt-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Create many accounts</h2>
+        <form method="post" action="{{ url_for('accounts.create_many') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="usernames">Usernames</label>
+            <textarea class="form-control" id="usernames" name="usernames" rows="6" autocomplete="off" required></textarea>
+            <div class="form-text">One per line. Existing usernames are skipped.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="bulk-password">Starting password (shared)</label>
+            <input class="form-control" id="bulk-password" name="password" type="text" autocomplete="off"
+                   minlength="{{ min_length }}" required>
+            <div class="form-text">Everyone replaces it when they first log in.</div>
+          </div>
+          <button class="btn btn-outline-primary w-100" type="submit">Create accounts</button>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
