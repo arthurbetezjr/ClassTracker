@@ -54,6 +54,7 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 ## Domain rules
 
 - Roles: `admin` and `user`. A default `admin` account (password `12345`) is seeded and must change its password on first login. Usernames can't be changed.
+- Production also has a second admin, `admin2`, added directly in the database on 2026-10-03 (the Accounts page only creates `user` accounts). Permissions check `role`, never the username, so any number of admins work. The Accounts page won't delete or reset any admin account, so an admin password reset means writing a new hash with SQL.
 - Only the admin creates, edits, and deletes accounts.
 - Subjects: `code` is the unique ID and can't be changed after creation. Deleting a subject deletes its entries and enrollments, after a warning.
 - Users enroll in subjects. They see calendar entries only for the subjects they're enrolled in; the admin sees all entries.
