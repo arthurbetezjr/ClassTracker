@@ -8,7 +8,9 @@
     {% if current_user.is_admin %}
     <a class="btn btn-outline-secondary" href="{{ url_for('entries.log') }}"><i class="bi bi-clock-history"></i> Change log</a>
     {% endif %}
+    {% if current_user.can_post_entries %}
     <a class="btn btn-primary" href="{{ url_for('entries.new') }}"><i class="bi bi-plus-lg"></i> Add entry</a>
+    {% endif %}
   </div>
 </div>
 

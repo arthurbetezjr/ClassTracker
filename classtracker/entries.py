@@ -53,8 +53,9 @@ def get_visible_entry(entry_id):
 
 
 def can_change(entry):
-    """Users change only their own entries; the admin can change any. Deleted entries are final."""
-    if entry.deleted_at is not None:
+    """Users change only their own entries, and only while the admin allows them to post entries;
+    the admin can change any. Deleted entries are final."""
+    if entry.deleted_at is not None or not current_user.can_post_entries:
         return False
     return current_user.is_admin or entry.created_by_id == current_user.id
 
@@ -187,6 +188,9 @@ def index():
 
 @bp.route("/new", methods=["GET", "POST"])
 def new():
+    if not current_user.can_post_entries:
+        flash("Your account can't add entries yet. Ask the admin if you need to.", "warning")
+        return redirect(url_for("home"))
     subjects = allowed_subjects()
     if not subjects:
         flash("Enroll in a subject first; then you can add entries to it." if not current_user.is_admin

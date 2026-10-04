@@ -1,10 +1,12 @@
 import sqlite3
 
 import pytest
-from sqlalchemy import event
+from sqlalchemy import event, select
 from sqlalchemy.engine import Engine
 
 from classtracker import create_app
+from classtracker.extensions import db
+from classtracker.models import User
 
 
 @event.listens_for(Engine, "connect")
@@ -51,9 +53,14 @@ def change_password(client, current, new, confirm=None):
     })
 
 
-def switch_to_new_user(admin_client, username="juan"):
-    """As admin, create a user; then log in as them with their password already changed."""
+def switch_to_new_user(admin_client, username="juan", allow_entries=True):
+    """As admin, create a user (allowed to post entries unless told otherwise); then log in as them
+    with their password already changed."""
     admin_client.post("/accounts/", data={"username": username, "password": "startpass1"})
+    if allow_entries:
+        with admin_client.application.app_context():
+            user_id = db.session.scalar(select(User.id).filter_by(username=username))
+        admin_client.post(f"/accounts/{user_id}/entries-permission", data={"allowed": "1"})
     admin_client.post("/logout")
     login(admin_client, username, "startpass1")
     change_password(admin_client, "startpass1", "userpass1")

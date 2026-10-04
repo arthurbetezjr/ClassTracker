@@ -3,7 +3,7 @@ from typing import Optional
 
 from flask import current_app
 from flask_login import UserMixin
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -46,12 +46,18 @@ class User(UserMixin, db.Model):
     # Login throttling: too many wrong passwords in a row locks the account briefly.
     failed_logins: Mapped[int] = mapped_column(default=0, server_default="0")
     locked_until: Mapped[Optional[dt.datetime]] = mapped_column(DateTime(timezone=True))
+    # Regular users may add, edit, or delete entries only after the admin allows it on the Accounts page.
+    entries_allowed: Mapped[bool] = mapped_column(default=False, server_default=false())
 
     subjects: Mapped[list["Subject"]] = relationship(secondary=enrollments, back_populates="students")
 
     @property
     def is_admin(self):
         return self.role == ROLE_ADMIN
+
+    @property
+    def can_post_entries(self):
+        return self.is_admin or self.entries_allowed
 
     def set_password(self, password):
         method = current_app.config.get("PASSWORD_HASH_METHOD", "scrypt")

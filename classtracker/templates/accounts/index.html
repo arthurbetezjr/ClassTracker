@@ -8,7 +8,7 @@
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead>
-            <tr><th>Username</th><th>Role</th><th>Created</th><th></th></tr>
+            <tr><th>Username</th><th>Role</th><th>Can add entries</th><th>Created</th><th></th></tr>
           </thead>
           <tbody>
             {% for user in users %}
@@ -20,6 +20,19 @@
                 {% endif %}
               </td>
               <td>{{ user.role }}</td>
+              <td>
+                {% if user.is_admin %}
+                <span class="text-secondary small">always</span>
+                {% else %}
+                <form method="post" action="{{ url_for('accounts.set_entries_permission', user_id=user.id) }}"
+                      class="form-check form-switch mb-0">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input class="form-check-input" type="checkbox" role="switch" name="allowed" value="1"
+                         id="allow-{{ user.id }}" aria-label="Allow {{ user.username }} to add entries"
+                         {% if user.entries_allowed %}checked{% endif %} onchange="this.form.submit()">
+                </form>
+                {% endif %}
+              </td>
               <td>{{ user.created_at.strftime("%Y-%m-%d") }}</td>
               <td class="text-end">
                 {% if not user.is_admin %}

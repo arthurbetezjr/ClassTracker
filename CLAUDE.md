@@ -33,7 +33,7 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - The Accounts page also has a bulk form (`accounts.create_many`, `POST /accounts/bulk`): one username per line plus a shared starting password. It skips existing usernames and creates nothing if any line is invalid. It was built (2026-10-01) to add the 46-student class roster.
 - Announcements (`announcements.py`, added 2026-10-01): the admin posts and deletes them at `/announcements/`. A context processor passes `open_announcements` (ones the current user hasn't closed) to every template, and `base.html` draws them as cards above the page content. The × button posts to `announcements.dismiss` in the background (`X-Requested-With: fetch` gets a 204; a plain form post redirects back) and stores a row in `announcement_dismissals`.
 - Tests set `PASSWORD_HASH_METHOD` to a cheap pbkdf2 so the suite runs in seconds; production uses scrypt.
-- Tests: `admin_client` fixture in `tests/conftest.py` is logged in as admin with the first-login password change done; `switch_to_new_user` / `switch_to_admin` swap the logged-in account.
+- Tests: `admin_client` fixture in `tests/conftest.py` is logged in as admin with the first-login password change done; `switch_to_new_user` / `switch_to_admin` swap the logged-in account (`switch_to_new_user` turns on entry posting unless `allow_entries=False`).
 - Every POST form must include `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` (Flask-WTF CSRFProtect).
 - Tests use in-memory SQLite with CSRF disabled (`tests/conftest.py`); keep models portable between SQLite and Postgres.
 - `requirements.txt`: runtime deps, which Vercel installs. `requirements-dev.txt` adds test tools.
@@ -59,7 +59,8 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - Subjects: `code` is the unique ID and can't be changed after creation. Deleting a subject deletes its entries and enrollments, after a warning.
 - Users enroll in subjects. They see calendar entries only for the subjects they're enrolled in; the admin sees all entries.
 - Entries: type is Cycle Meeting, Task, Exam, or What Happened (an update with no deadline; its details text is required), each with its own gradient. Only Cycle Meetings have a meeting link and an optional end time (after the start time). Each entry has a unique readable ID (for example `E-00042`). Subject code and date are required. Time, meeting link (Meetings only), and instructions are optional.
-- Users can add entries only in subjects they're enrolled in, and can edit or delete only their own entries. The admin can edit or delete any entry.
+- Posting entries is off by default for `user` accounts (added 2026-10-04). The admin turns it on per account with the "Can add entries" switch on the Accounts page (`users.entries_allowed`, `accounts.set_entries_permission`); `User.can_post_entries` is always true for admins. Without it a user is read-only: no adding, and no editing or deleting even their own earlier entries (`can_change()` checks it). Their entries stay up.
+- Users who may post can add entries only in subjects they're enrolled in, and can edit or delete only their own entries. The admin can edit or delete any entry.
 - Every delete needs a reason. Edits need a reason only when the editor didn't create the entry (i.e. the admin editing someone else's).
 - Deleted entries are soft-deleted: they stay visible to everyone in the subject, marked deleted, with the reason, and can no longer be edited. Every edit and delete (by anyone) is recorded in `entry_changes` with what changed; only the admin sees this change log.
 - Deleting a user keeps the entries they created.

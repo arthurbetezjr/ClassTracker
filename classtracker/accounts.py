@@ -98,6 +98,22 @@ def reset_password(user_id):
     return redirect(url_for("accounts.index"))
 
 
+@bp.post("/<int:user_id>/entries-permission")
+def set_entries_permission(user_id):
+    # The switch on the Accounts page submits "allowed=1" when turned on and nothing when turned off.
+    user = db.get_or_404(User, user_id)
+    if user.role == ROLE_ADMIN:
+        flash("Admins can always add entries.", "info")
+        return redirect(url_for("accounts.index"))
+    user.entries_allowed = request.form.get("allowed") == "1"
+    db.session.commit()
+    if user.entries_allowed:
+        flash(f"\"{user.username}\" can now add, edit, and delete their own entries.", "success")
+    else:
+        flash(f"\"{user.username}\" can no longer add or change entries. Entries they made are kept.", "success")
+    return redirect(url_for("accounts.index"))
+
+
 @bp.post("/<int:user_id>/delete")
 def delete(user_id):
     user = db.get_or_404(User, user_id)
