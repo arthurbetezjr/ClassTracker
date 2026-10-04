@@ -65,7 +65,7 @@ ClassTracker is a shared class calendar webapp. Build plan: 1 setup, 2 login, 3 
 - Every delete needs a reason. Edits need a reason only when the editor didn't create the entry (i.e. the admin editing someone else's).
 - Deleting an entry is permanent (changed 2026-10-04; it used to be a soft delete): the row is removed and it disappears for everyone, admin included. Every edit and delete (by anyone) is recorded in `entry_changes`; only the admin sees this change log. Log rows survive the entry: they store its ID and subject code as text (`entry_public_id`, `subject_code`), and `entry_id` becomes NULL (`ON DELETE SET NULL`). A delete row's `details` holds the entry's type and date.
 - Deleting a user keeps the entries they created.
-- Announcements: only the admin posts or deletes them (no editing; delete and repost). Each one shows on every page for every account, including accounts created later, until that user closes it. Closing is saved per account, so it stays closed on all devices. Plain text, line breaks kept.
+- Announcements: only the admin posts or deletes them (no editing; delete and repost). Each one shows on every page for every account, including accounts created later, until that user closes it. Closing is saved per account, so it stays closed on all devices. Every account can still reread all announcements, closed or not, on the Announcements tab. Plain text, line breaks kept.
 - Login: 5 wrong passwords in a row lock that account for 5 minutes (`users.failed_logins`, `users.locked_until`); an admin password reset lifts the lock.
 
 ## Repository
