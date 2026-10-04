@@ -10,15 +10,17 @@
   <div class="table-responsive">
     <table class="table align-middle mb-0">
       <thead>
-        <tr><th>When</th><th>Entry</th><th>Action</th><th>By</th><th>Reason</th><th>What changed</th></tr>
+        <tr><th>When</th><th>Entry</th><th>Action</th><th>By</th><th>Reason</th><th>Details</th></tr>
       </thead>
       <tbody>
         {% for change in changes %}
         <tr>
           <td class="text-nowrap small">{{ change.created_at|local_timestamp }}</td>
           <td class="text-nowrap">
-            <a href="{{ url_for('entries.detail', entry_id=change.entry_id) }}">{{ change.entry.public_id }}</a>
-            <div class="small text-secondary">{{ change.entry.subject_code }}</div>
+            {% if change.entry_id %}
+            <a href="{{ url_for('entries.detail', entry_id=change.entry_id) }}">{{ change.entry_public_id }}</a>
+            {% else %}{{ change.entry_public_id }}{% endif %}
+            <div class="small text-secondary">{{ change.subject_code }}</div>
           </td>
           <td>
             {% if change.action == "delete" %}<span class="badge text-bg-danger">Delete</span>

@@ -85,7 +85,7 @@ def test_revoked_user_keeps_entries_but_cannot_change_them(app, setup):
     assert client.get(f"/entries/{entry_id}/edit").status_code == 403
     assert client.post(f"/entries/{entry_id}/delete", data={"reason": "oops"}).status_code == 403
     with app.app_context():
-        assert db.session.get(Entry, entry_id).deleted_at is None
+        assert db.session.get(Entry, entry_id) is not None
 
 
 def test_only_admins_change_permissions(app, setup):

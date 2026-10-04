@@ -25,6 +25,9 @@ ADDED_COLUMNS = [
     ("users", "failed_logins", "ALTER TABLE users ADD COLUMN failed_logins INTEGER NOT NULL DEFAULT 0"),
     ("users", "locked_until", "ALTER TABLE users ADD COLUMN locked_until TIMESTAMP WITH TIME ZONE"),
     ("users", "entries_allowed", "ALTER TABLE users ADD COLUMN entries_allowed BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("entry_changes", "entry_public_id",
+     "ALTER TABLE entry_changes ADD COLUMN entry_public_id VARCHAR(20) NOT NULL DEFAULT ''"),
+    ("entry_changes", "subject_code", "ALTER TABLE entry_changes ADD COLUMN subject_code VARCHAR(20) NOT NULL DEFAULT ''"),
 ]
 
 

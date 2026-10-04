@@ -57,21 +57,19 @@
       </thead>
       <tbody>
         {% for entry in entries %}
-        {% set deleted = entry.deleted_at is not none %}
-        <tr class="{% if deleted %}text-secondary{% endif %}" style="cursor: pointer;"
+        <tr style="cursor: pointer;"
             onclick="window.location='{{ url_for('entries.detail', entry_id=entry.id) }}'">
           <td class="text-nowrap">
-            <a href="{{ url_for('entries.detail', entry_id=entry.id) }}" class="{% if deleted %}link-secondary{% endif %}">{{ entry.public_id }}</a>
+            <a href="{{ url_for('entries.detail', entry_id=entry.id) }}">{{ entry.public_id }}</a>
           </td>
           <td class="text-nowrap">
             {{ type_badge(entry.type) }}
-            {% if deleted %}<span class="badge text-bg-dark">Deleted</span>{% endif %}
           </td>
-          <td class="{% if deleted %}text-decoration-line-through{% endif %}">
+          <td>
             <span class="fw-semibold">{{ entry.subject_code }}</span>
             <span class="d-none d-md-inline">· {{ entry.subject.name }}</span>
           </td>
-          <td class="text-nowrap {% if deleted %}text-decoration-line-through{% endif %}">{{ entry.date|nice_date }}</td>
+          <td class="text-nowrap">{{ entry.date|nice_date }}</td>
           <td class="text-nowrap">{{ time_range(entry) }}</td>
           <td>{{ author(entry.created_by) }}</td>
         </tr>

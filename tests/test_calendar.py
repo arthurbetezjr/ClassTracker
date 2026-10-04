@@ -37,15 +37,18 @@ def test_feed_filters(setup):
     add_entry(setup, date="2026-10-05", type="meeting")
     add_entry(setup, date="2026-10-06", type="task", subject_code="MATH1")
     add_entry(setup, date="2026-10-07", type="exam")
-    setup.post("/entries/3/delete", data={"reason": "cancelled"})
 
     assert ids(setup.get(OCTOBER + "&subject=MATH1")) == ["E-00002"]
     assert ids(setup.get(OCTOBER + "&types=meeting,exam")) == ["E-00001", "E-00003"]
     assert ids(setup.get(OCTOBER + "&types=")) == []
-    assert ids(setup.get(OCTOBER + "&deleted=0")) == ["E-00001", "E-00002"]
 
-    deleted = setup.get(OCTOBER).get_json()[2]
-    assert deleted["classNames"] == ["ct-type-exam", "entry-deleted"] and deleted["extendedProps"]["deleted"] is True
+
+def test_deleted_entries_leave_the_calendar(setup):
+    add_entry(setup, date="2026-10-05")
+    add_entry(setup, date="2026-10-06")
+    setup.post("/entries/2/delete", data={"reason": "cancelled"})
+    assert ids(setup.get(OCTOBER)) == ["E-00001"]
+    assert b"Show deleted" not in setup.get("/").data
 
 
 def test_feed_rejects_bad_dates(setup):

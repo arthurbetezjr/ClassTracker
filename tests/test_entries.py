@@ -93,7 +93,7 @@ def test_user_cannot_edit_or_delete_others_entries(app, setup):
     assert client.get("/entries/1").status_code == 200
     assert client.get("/entries/1/edit").status_code == 403
     assert client.post("/entries/1/delete", data={"reason": "troll"}).status_code == 403
-    assert only_entry(app).deleted_at is None
+    assert only_entry(app).id == 1  # still there
 
 
 def test_admin_edit_of_someone_elses_entry_needs_reason_and_is_logged(app, setup):
@@ -110,23 +110,32 @@ def test_admin_edit_of_someone_elses_entry_needs_reason_and_is_logged(app, setup
     assert b"It is actually an exam" in log and b"Cycle Meeting \xe2\x86\x92 Exam" in log
 
 
-def test_delete_is_soft_and_visible_to_others_with_reason(app, setup):
+def test_delete_is_permanent_and_kept_in_the_log(app, setup):
     client = as_user(setup, "juan")
     add_entry(client)
+    client.post("/entries/1/edit", data={"type": "exam", "subject_code": "CS101", "date": "2026-10-05",
+                                         "time": "14:30", "meeting_link": "", "instructions": "Bring notes"})
     assert b"give a reason" in client.post("/entries/1/delete", data={"reason": " "}, follow_redirects=True).data
-    client.post("/entries/1/delete", data={"reason": "Class cancelled"})
-    entry = only_entry(app)
-    assert entry.deleted_at is not None and entry.delete_reason == "Class cancelled"
+    response = client.post("/entries/1/delete", data={"reason": "Class cancelled"})
+    assert response.status_code == 302 and response.headers["Location"] == "/"
+    with app.app_context():
+        assert db.session.query(Entry).count() == 0
 
-    # A second enrolled user sees it, marked deleted with the reason, and nobody can edit it now.
+    # Gone for everyone, admin included.
+    assert client.get("/entries/1").status_code == 404
     admin = switch_to_admin(client)
-    switch_to_new_user(admin, "maria")
-    admin.post("/subjects/CS101/enroll")
-    page = admin.get("/entries/1").data
-    assert b"This entry was deleted" in page and b"Class cancelled" in page
-    assert b"Deleted</span>" in admin.get("/entries/").data
-    switch_to_admin(admin)
-    assert admin.get("/entries/1/edit").status_code == 403
+    assert admin.get("/entries/1").status_code == 404
+    assert b'href="/entries/1"' not in admin.get("/entries/?when=all").data
+
+    # The change log still has the edit and the delete, without a link to the missing entry.
+    with app.app_context():
+        changes = db.session.query(EntryChange).order_by(EntryChange.id).all()
+        assert [c.action for c in changes] == ["edit", "delete"]
+        assert all(c.entry_id is None and c.entry_public_id == "E-00001" and c.subject_code == "CS101"
+                   for c in changes)
+        assert changes[1].reason == "Class cancelled" and changes[1].details == "Exam on Mon, Oct 5, 2026"
+    log = admin.get("/entries/log").data
+    assert b"Class cancelled" in log and b"E-00001" in log and b'href="/entries/1"' not in log
 
 
 def test_change_log_is_admin_only(setup):

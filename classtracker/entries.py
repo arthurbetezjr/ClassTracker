@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 
 from .auth import admin_required
 from .extensions import db
-from .models import ENTRY_COLORS, ENTRY_TYPES, Entry, EntryChange, Subject, enrollments, utcnow
+from .models import ENTRY_COLORS, ENTRY_TYPES, Entry, EntryChange, Subject, enrollments
 from .timeutil import local_today, nice_date, nice_time
 
 bp = Blueprint("entries", __name__, url_prefix="/entries")
@@ -29,9 +29,7 @@ FIELD_LABELS = {
 
 def visible_entries():
     """Query for the entries the current user may see: all for the admin, enrolled subjects otherwise."""
-    query = select(Entry).options(
-        joinedload(Entry.subject), joinedload(Entry.created_by), joinedload(Entry.deleted_by)
-    )
+    query = select(Entry).options(joinedload(Entry.subject), joinedload(Entry.created_by))
     if not current_user.is_admin:
         enrolled = select(enrollments.c.subject_code).where(enrollments.c.user_id == current_user.id)
         query = query.where(Entry.subject_code.in_(enrolled))
@@ -54,8 +52,8 @@ def get_visible_entry(entry_id):
 
 def can_change(entry):
     """Users change only their own entries, and only while the admin allows them to post entries;
-    the admin can change any. Deleted entries are final."""
-    if entry.deleted_at is not None or not current_user.can_post_entries:
+    the admin can change any."""
+    if not current_user.can_post_entries:
         return False
     return current_user.is_admin or entry.created_by_id == current_user.id
 
@@ -128,6 +126,12 @@ def form_values(entry):
         "instructions": entry.instructions,
         "reason": "",
     }
+
+
+def log_change(entry, action, reason, details=""):
+    # The log keeps the entry's ID and subject as text, so the record outlives a deleted entry.
+    db.session.add(EntryChange(entry_id=entry.id, entry_public_id=entry.public_id, subject_code=entry.subject_code,
+                               action=action, reason=reason, details=details, actor_id=current_user.id))
 
 
 def describe(field, value):
@@ -241,8 +245,7 @@ def edit(entry_id):
         else:
             for field, value in fields.items():
                 setattr(entry, field, value)
-            db.session.add(EntryChange(entry_id=entry.id, action="edit", reason=values["reason"],
-                                       details="\n".join(changes), actor_id=current_user.id))
+            log_change(entry, "edit", values["reason"], "\n".join(changes))
             db.session.commit()
             flash(f"{entry.public_id} updated.", "success")
             return redirect(url_for("entries.detail", entry_id=entry.id))
@@ -257,15 +260,15 @@ def delete(entry_id):
         abort(403)
     reason = request.form.get("reason", "").strip()
     if not reason:
-        flash("Please give a reason for deleting. Everyone in the subject will see it.", "danger")
+        flash("Please give a reason for deleting.", "danger")
         return redirect(url_for("entries.detail", entry_id=entry.id))
-    entry.deleted_at = utcnow()
-    entry.deleted_by_id = current_user.id
-    entry.delete_reason = reason
-    db.session.add(EntryChange(entry_id=entry.id, action="delete", reason=reason, actor_id=current_user.id))
+    # Deleting is permanent: the entry is removed for everyone. Only the change log remembers it.
+    log_change(entry, "delete", reason, f"{ENTRY_TYPES[entry.type]} on {nice_date(entry.date)}")
+    db.session.flush()
+    db.session.delete(entry)  # the database keeps the log rows, with their entry link set to NULL
     db.session.commit()
-    flash(f"{entry.public_id} deleted. It stays visible, marked as deleted, with your reason.", "success")
-    return redirect(url_for("entries.detail", entry_id=entry.id))
+    flash(f"{entry.public_id} deleted.", "success")
+    return redirect(url_for("home"))
 
 
 def at(date, time):
@@ -287,12 +290,9 @@ def calendar_feed():
         query = query.where(Entry.subject_code == subject)
     if "types" in request.args:  # present but empty means every type is switched off
         query = query.where(Entry.type.in_([t for t in request.args["types"].split(",") if t in ENTRY_TYPES]))
-    if request.args.get("deleted") == "0":
-        query = query.where(Entry.deleted_at.is_(None))
 
     events = []
     for entry in db.session.scalars(query):
-        deleted = entry.deleted_at is not None
         events.append({
             "id": entry.id,
             "title": f"{entry.subject_code} · {ENTRY_TYPES[entry.type]}",
@@ -301,12 +301,11 @@ def calendar_feed():
             "allDay": entry.time is None,
             "color": ENTRY_COLORS[entry.type],
             "url": url_for("entries.detail", entry_id=entry.id),
-            "classNames": [f"ct-type-{entry.type}"] + (["entry-deleted"] if deleted else []),
+            "classNames": [f"ct-type-{entry.type}"],
             "extendedProps": {
                 "publicId": entry.public_id,
                 "subjectCode": entry.subject_code,
                 "subjectName": entry.subject.name,
-                "deleted": deleted,
             },
         })
     return jsonify(events)
@@ -317,7 +316,7 @@ def calendar_feed():
 def log():
     changes = db.session.scalars(
         select(EntryChange)
-        .options(joinedload(EntryChange.entry).joinedload(Entry.subject), joinedload(EntryChange.actor))
+        .options(joinedload(EntryChange.actor))
         .order_by(EntryChange.created_at.desc(), EntryChange.id.desc())
         .limit(300)
     ).all()

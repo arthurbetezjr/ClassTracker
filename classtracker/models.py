@@ -96,14 +96,9 @@ class Entry(db.Model):
     created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
-    # Soft delete: deleted entries stay visible to everyone, marked with the reason.
-    deleted_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime(timezone=True))
-    deleted_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-    delete_reason: Mapped[str] = mapped_column(Text, default="")
 
     subject: Mapped[Subject] = relationship(back_populates="entries")
-    created_by: Mapped[Optional[User]] = relationship(foreign_keys=[created_by_id])
-    deleted_by: Mapped[Optional[User]] = relationship(foreign_keys=[deleted_by_id])
+    created_by: Mapped[Optional[User]] = relationship()
 
     @property
     def public_id(self):
@@ -111,19 +106,22 @@ class Entry(db.Model):
 
 
 class EntryChange(db.Model):
-    """Change log shown to the admin: every edit or delete of an entry, by anyone."""
+    """Change log shown to the admin: every edit or delete of an entry, by anyone. Deleting an entry
+    removes it for good, but its log rows stay; they keep the entry's ID and subject as text."""
 
     __tablename__ = "entry_changes"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    entry_id: Mapped[int] = mapped_column(ForeignKey("entries.id", ondelete="CASCADE"))
+    entry_id: Mapped[Optional[int]] = mapped_column(ForeignKey("entries.id", ondelete="SET NULL"))
+    entry_public_id: Mapped[str] = mapped_column(String(20), default="", server_default="")
+    subject_code: Mapped[str] = mapped_column(String(20), default="", server_default="")
     action: Mapped[str] = mapped_column(String(10))  # "edit" or "delete"
     reason: Mapped[str] = mapped_column(Text)
     details: Mapped[str] = mapped_column(Text, default="", server_default="")  # what an edit changed
     actor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
-    entry: Mapped[Entry] = relationship()
+    entry: Mapped[Optional[Entry]] = relationship()
     actor: Mapped[Optional[User]] = relationship()
 
 

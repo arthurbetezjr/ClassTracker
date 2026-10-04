@@ -19,7 +19,7 @@ def normalize_code(code):
 
 
 def subjects_with_counts():
-    """Every subject with its number of enrolled users and (non-deleted) entries, in one query."""
+    """Every subject with its number of enrolled users and entries, in one query."""
     students = (
         select(enrollments.c.subject_code, func.count().label("n"))
         .group_by(enrollments.c.subject_code)
@@ -27,7 +27,6 @@ def subjects_with_counts():
     )
     entries = (
         select(Entry.subject_code, func.count().label("n"))
-        .where(Entry.deleted_at.is_(None))
         .group_by(Entry.subject_code)
         .subquery()
     )
