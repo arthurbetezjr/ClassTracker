@@ -164,12 +164,12 @@
           <li class="nav-item">
             <a class="nav-link {% if request.blueprint == 'subjects' %}active{% endif %}" href="{{ url_for('subjects.index') }}">Subjects</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.blueprint == 'announcements' %}active{% endif %}" href="{{ url_for('announcements.index') }}">Announcements</a>
+          </li>
           {% if current_user.is_admin %}
           <li class="nav-item">
             <a class="nav-link {% if request.blueprint == 'accounts' %}active{% endif %}" href="{{ url_for('accounts.index') }}">Accounts</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link {% if request.blueprint == 'announcements' %}active{% endif %}" href="{{ url_for('announcements.index') }}">Announcements</a>
           </li>
           {% endif %}
         </ul>
@@ -190,7 +190,8 @@
   </nav>
 
   <main class="container pb-5">
-    {% for announcement in open_announcements %}
+    {# The Announcements page already lists them all, so skip the closable cards there. #}
+    {% for announcement in open_announcements if request.blueprint != 'announcements' %}
     <div class="card shadow-sm ct-announcement mb-3" data-announcement>
       <div class="card-body d-flex align-items-start gap-3 py-3">
         <i class="bi bi-megaphone ct-gradient-text fs-5"></i>

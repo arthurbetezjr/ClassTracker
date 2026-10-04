@@ -29,7 +29,9 @@ def test_message_is_required(app, admin_client):
 def test_only_admin_manages_announcements(app, admin_client):
     post(admin_client)
     switch_to_new_user(admin_client)
-    assert admin_client.get("/announcements/").status_code == 403
+    page = admin_client.get("/announcements/")
+    assert page.status_code == 200
+    assert b"Post announcement" not in page.data and b"/delete" not in page.data
     assert admin_client.post("/announcements/", data={"body": "hi"}).status_code == 403
     assert admin_client.post(f"/announcements/{announcement_id(app)}/delete").status_code == 403
 
@@ -62,3 +64,35 @@ def test_delete_removes_it_for_everyone(app, admin_client):
 def test_text_is_escaped(admin_client):
     page = post(admin_client, body="<script>alert(1)</script>").data
     assert b"<script>alert(1)" not in page and b"&lt;script&gt;" in page
+
+
+def test_closed_announcements_stay_on_the_tab(app, admin_client):
+    post(admin_client)
+    an_id = announcement_id(app)
+    switch_to_new_user(admin_client)
+    admin_client.post(f"/announcements/{an_id}/dismiss")
+    assert b"Exams moved to Friday" not in admin_client.get("/").data
+    page = admin_client.get("/announcements/").data
+    assert b"Exams moved to Friday" in page and b"Heads up" in page
+
+
+def test_tab_shows_each_announcement_once(app, admin_client):
+    post(admin_client)
+    switch_to_new_user(admin_client)
+    page = admin_client.get("/announcements/").data
+    assert page.count(b"Exams moved to Friday") == 1
+    assert b"data-announcement>" not in page  # no closable card on this page
+
+
+def test_deleted_announcement_leaves_the_tab(app, admin_client):
+    post(admin_client)
+    an_id = announcement_id(app)
+    admin_client.post(f"/announcements/{an_id}/delete")
+    switch_to_new_user(admin_client)
+    page = admin_client.get("/announcements/").data
+    assert b"Exams moved to Friday" not in page and b"No announcements yet" in page
+
+
+def test_every_user_sees_the_tab_in_the_nav(admin_client):
+    switch_to_new_user(admin_client)
+    assert b'href="/announcements/"' in admin_client.get("/").data

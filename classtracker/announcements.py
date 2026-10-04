@@ -21,10 +21,12 @@ def open_announcements():
 
 
 @bp.get("/")
-@admin_required
 def index():
+    # Everyone can read the full list (including ones they closed); only the admin gets the post form.
     announcements = db.session.scalars(select(Announcement).order_by(Announcement.id.desc())).all()
-    return render_template("announcements/index.html", announcements=announcements, max_title=MAX_TITLE_LENGTH)
+    if current_user.is_admin:
+        return render_template("announcements/index.html", announcements=announcements, max_title=MAX_TITLE_LENGTH)
+    return render_template("announcements/user_index.html", announcements=announcements)
 
 
 @bp.post("/")
