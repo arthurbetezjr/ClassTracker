@@ -102,11 +102,11 @@
       // Entries without an end are a moment in time; the default of one hour would push an 11:59 PM
       // deadline onto the next day.
       defaultTimedEventDuration: "00:01",
+      // Every view shows times in full, e.g. "9:00am" and "7:30am".
       eventTimeFormat: { hour: "numeric", minute: "2-digit", meridiem: "short" },
       views: {
         dayGridMonth: {
-          // Month cells are narrow: show a short time and the subject code; the color shows the type.
-          eventTimeFormat: { hour: "numeric", minute: "2-digit", omitZeroMinute: true, meridiem: "narrow" },
+          // Month cells are narrow: show the time and the subject code; the color shows the type.
           eventContent: function (arg) {
             var wrap = document.createElement("div");
             wrap.className = "ct-event-line";

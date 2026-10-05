@@ -2,7 +2,7 @@
 {% from "entries/_macros.html" import type_badge, author, time_range with context %}
 {% block title %}{{ entry.public_id }} · ClassTracker{% endblock %}
 {% block content %}
-<a class="d-inline-block mb-3" href="{{ url_for('entries.index') }}">&larr; Back to entries</a>
+<a class="d-inline-block mb-3" href="{{ url_for('home') }}">&larr; Back to calendar</a>
 <div class="row justify-content-center">
   <div class="col-md-9 col-lg-7">
     <div class="card shadow-sm mb-4" style="border-left: 6px solid {{ ENTRY_COLORS[entry.type] }};">

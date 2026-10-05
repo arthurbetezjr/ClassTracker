@@ -53,6 +53,11 @@ def test_admin_adds_entry_in_any_subject(app, setup):
     assert only_entry(app).subject_code == "MATH1"
 
 
+def test_entry_page_links_back_to_calendar(app, setup):
+    page = add_entry(setup).data
+    assert b'href="/">&larr; Back to calendar' in page
+
+
 def test_required_and_optional_fields(app, setup):
     assert b"Choose a date" in add_entry(setup, date="").data
     add_entry(setup, type="task", time="", meeting_link="https://ignored.example", instructions="")
