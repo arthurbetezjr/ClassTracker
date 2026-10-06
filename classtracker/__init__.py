@@ -53,7 +53,7 @@ def create_app(test_config=None):
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
 
-    from . import accounts, announcements, auth, entries, subjects
+    from . import accounts, announcements, auth, entries, subjects, usage
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(accounts.bp)
@@ -81,6 +81,7 @@ def create_app(test_config=None):
             return None
         if not current_user.is_authenticated:
             return login_manager.unauthorized()
+        usage.record_activity(current_user)
         if current_user.must_change_password and request.endpoint not in PASSWORD_CHANGE_ENDPOINTS:
             flash("Please choose a new password before continuing.", "warning")
             return redirect(url_for("auth.account"))

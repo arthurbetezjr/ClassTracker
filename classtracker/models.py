@@ -145,3 +145,14 @@ class Announcement(db.Model):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     created_by: Mapped[Optional[User]] = relationship()
+
+
+class UserActivityDay(db.Model):
+    """One row per student per day (in APP_TIMEZONE) they loaded a page; feeds the admin Usage page.
+    Rows go away with the user through the database cascade, so User has no relationship to them."""
+
+    __tablename__ = "user_activity_days"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    day: Mapped[dt.date] = mapped_column(primary_key=True)
+    last_seen_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
