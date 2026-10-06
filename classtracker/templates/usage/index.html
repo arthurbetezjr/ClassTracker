@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Usage · ClassTracker{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Usage</h1>
+<p class="small text-body-secondary mb-3">
+  Online now = active in the last {{ online_minutes }} minutes (an estimate).
+  {% if counting_started %}Counting started {{ counting_started | nice_date(weekday=False) }}.{% else %}No activity recorded yet.{% endif %}
+</p>
+
+<div class="row g-3 mb-4">
+  {% for label, value in [("Online now", online | length), ("Today", today), ("This month", this_month), ("This year", this_year)] %}
+  <div class="col-6 col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="small text-body-secondary">{{ label }}</div>
+        <div class="fs-2 fw-semibold">{{ value }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Online now</h2>
+        {% if online %}
+        <ul class="list-unstyled mb-0">
+          {% for username in online %}<li>{{ username }}</li>{% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-body-secondary mb-0">Nobody right now.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body pb-0"><h2 class="h5 mb-0">All students</h2></div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr><th>Username</th><th>Last seen</th></tr>
+          </thead>
+          <tbody>
+            {% for username, seen in students %}
+            <tr>
+              <td>{{ username }}</td>
+              <td>{% if seen %}{{ seen | local_timestamp }}{% else %}<span class="text-body-secondary">Never</span>{% endif %}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-body-secondary">No student accounts yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

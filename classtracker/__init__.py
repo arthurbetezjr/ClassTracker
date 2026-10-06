@@ -60,6 +60,7 @@ def create_app(test_config=None):
     app.register_blueprint(subjects.bp)
     app.register_blueprint(entries.bp)
     app.register_blueprint(announcements.bp)
+    app.register_blueprint(usage.bp)
 
     app.jinja_env.filters["nice_date"] = timeutil.nice_date
     app.jinja_env.filters["nice_time"] = timeutil.nice_time

@@ -160,3 +160,87 @@ def test_database_failure_does_not_break_the_page(app, admin_client, clock, monk
     assert activity(app) == []
     with client.session_transaction() as session:
         assert usage.SESSION_KEY not in session  # so the next page load tries again
+
+
+# Usage page
+
+
+def create_students(admin_client, *usernames):
+    for username in usernames:
+        admin_client.post("/accounts/", data={"username": username, "password": "startpass1"})
+
+
+def stats(app, now):
+    with app.test_request_context():
+        return usage.usage_stats(now)
+
+
+def test_counts_today_month_and_year_in_local_time(app, admin_client):
+    now = manila(2026, 10, 6, 9, 0)
+    create_students(admin_client, "ana", "ben", "cara", "dino", "ella")
+    add_activity(app, "ana", manila(2026, 10, 6, 8, 0))     # today
+    add_activity(app, "ana", manila(2026, 9, 10))           # ana counted once per period
+    add_activity(app, "ben", manila(2026, 10, 1, 0, 30))    # Oct 1 in Manila, still Sep 30 in UTC
+    add_activity(app, "cara", manila(2026, 9, 30, 23, 30))  # last month
+    add_activity(app, "dino", manila(2026, 3, 3))           # earlier this year
+    add_activity(app, "ella", manila(2025, 12, 31, 23, 59)) # last year
+
+    result = stats(app, now)
+    assert (result["today"], result["this_month"], result["this_year"]) == (1, 2, 4)
+    assert result["online"] == []
+    assert result["counting_started"] == dt.date(2025, 12, 31)
+
+
+def test_online_now_uses_ten_minute_window(app, admin_client):
+    now = manila(2026, 10, 6, 9, 0)
+    create_students(admin_client, "ana", "ben", "cara")
+    add_activity(app, "ana", now - dt.timedelta(minutes=11))
+    add_activity(app, "ben", now - dt.timedelta(minutes=9))
+    add_activity(app, "cara", now - dt.timedelta(minutes=2))
+    assert stats(app, now)["online"] == ["cara", "ben"]
+
+
+def test_page_lists_students_by_last_seen(app, admin_client, clock):
+    create_students(admin_client, "ana", "ben", "zed", "carl")
+    add_activity(app, "ben", clock.now - dt.timedelta(minutes=3))
+    add_activity(app, "ana", manila(2026, 10, 2, 14, 30))
+    add_activity(app, "ana", manila(2026, 10, 1, 8, 0))
+
+    page = admin_client.get("/usage/").get_data(as_text=True)
+    assert "Counting started Oct 1, 2026." in page
+    assert "Oct 2, 2026 2:30 PM" in page  # ana's latest row, in Manila time
+    assert "Nobody right now." not in page
+    # Most recent first, then the never-seen students by username; admins aren't listed.
+    table = page[page.index("All students"):]
+    positions = [table.index(f"<td>{name}</td>") for name in ("ben", "ana", "carl", "zed")]
+    assert positions == sorted(positions)
+    assert table.count("Never") == 2
+    assert "<td>admin</td>" not in table
+
+
+def test_page_before_any_activity(admin_client, clock):
+    page = admin_client.get("/usage/").get_data(as_text=True)
+    assert "No activity recorded yet." in page
+    assert "Nobody right now." in page
+
+
+def test_deleting_a_user_deletes_their_activity(app, admin_client):
+    create_students(admin_client, "juan")
+    add_activity(app, "juan", manila(2026, 10, 5))
+    juan_id = user_id(app, "juan")
+    response = admin_client.post(f"/accounts/{juan_id}/delete", follow_redirects=True)
+    assert b"deleted" in response.data
+    with app.app_context():
+        assert db.session.scalars(select(UserActivityDay)).all() == []
+
+
+def test_usage_page_is_admin_only(app, admin_client):
+    assert b">Usage</a>" in admin_client.get("/").data
+    assert admin_client.get("/usage/").status_code == 200
+
+    switch_to_new_user(admin_client)
+    assert admin_client.get("/usage/").status_code == 403
+    assert b">Usage</a>" not in admin_client.get("/").data
+
+    admin_client.post("/logout")
+    assert "/login" in admin_client.get("/usage/").headers["Location"]

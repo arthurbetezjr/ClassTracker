@@ -8,17 +8,65 @@ cookie, so most page loads cost no database work at all. Admin activity isn't re
 
 import datetime as dt
 
-from flask import current_app, session
-from sqlalchemy import insert, update
+from flask import Blueprint, current_app, render_template, session
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from .auth import admin_required
 from .extensions import db
-from .models import UserActivityDay, utcnow
+from .models import ROLE_USER, User, UserActivityDay, utcnow
 from .timeutil import app_zone, as_utc
 
 ONLINE_WINDOW = dt.timedelta(minutes=10)  # "online now" = active this recently (an estimate)
 SAVE_INTERVAL = dt.timedelta(minutes=5)  # must stay shorter than ONLINE_WINDOW
 SESSION_KEY = "ct_seen"  # {"u": user id, "t": UTC ISO time of the last save}
+
+bp = Blueprint("usage", __name__, url_prefix="/usage")
+
+
+@bp.before_request
+@admin_required
+def only_admins():
+    pass
+
+
+@bp.get("/")
+def index():
+    return render_template("usage/index.html", **usage_stats(utcnow()),
+                           online_minutes=int(ONLINE_WINDOW.total_seconds() // 60))
+
+
+def usage_stats(now):
+    """Everything the Usage page shows, computed from the activity rows (nothing is stored)."""
+    today = local_day(now)
+
+    def students_active_since(first_day):
+        return db.session.scalar(
+            select(func.count(func.distinct(UserActivityDay.user_id)))
+            .join(User, User.id == UserActivityDay.user_id)
+            .where(User.role == ROLE_USER, UserActivityDay.day >= first_day)
+        )
+
+    last_seen = db.session.execute(
+        select(User.username, func.max(UserActivityDay.last_seen_at))
+        .outerjoin(UserActivityDay, UserActivityDay.user_id == User.id)
+        .where(User.role == ROLE_USER)
+        .group_by(User.id, User.username)
+    ).all()
+    # Most recent first, students never seen last, then by username.
+    students = sorted(
+        ((name, as_utc(seen) if seen else None) for name, seen in last_seen),
+        key=lambda row: (row[1] is None, -row[1].timestamp() if row[1] else 0, row[0]),
+    )
+    online = [name for name, seen in students if seen and seen >= now - ONLINE_WINDOW]
+    return {
+        "online": online,
+        "today": students_active_since(today),
+        "this_month": students_active_since(today.replace(day=1)),
+        "this_year": students_active_since(today.replace(month=1, day=1)),
+        "students": students,
+        "counting_started": db.session.scalar(select(func.min(UserActivityDay.day))),
+    }
 
 
 def local_day(moment):
